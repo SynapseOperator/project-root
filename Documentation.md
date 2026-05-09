@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Chinese UI redesign phase Milestone 4 complete; ready for Milestone 5 integration and text validation checks
+Chinese UI redesign phase Milestone 5 complete; ready for Milestone 6 full quality gate
 
 Last updated:
 
@@ -56,8 +56,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 2 - Core P0 Feature 1 | Completed | Android login now calls backend `/api/v1/auth/student`, refreshes current user with `/api/v1/me`, uses configurable `API_BASE_URL`, shows Chinese loading/error/demo states, and keeps student-number privacy copy in Chinese. |
 | Milestone 3 - Core P0 Feature 2 | Completed | Android traffic report list, detail refresh, creation, and feedback now use backend APIs when logged in online, with clearly labeled local demo fallback. |
 | Milestone 4 - Core P0 Feature 3 | Completed | Accident board, profile, leaderboard, and demo admin pages now have clearer Chinese copy, local/demo boundaries, privacy notes, and role-aware admin visibility. |
-| Milestone 5 - Integration and Error Handling | Next | Exercise integrated Android states, backend unavailable handling, and Chinese/safety text checks. |
-| Milestone 6 - Tests and Quality Check | Not started | Add or update tests and run full practical validation. |
+| Milestone 5 - Integration and Error Handling | Completed | Added Android Chinese text validation, strengthened safety phrase scanning for Chinese unlawful-evasion wording, and verified the scripts with Android/backend builds and tests. |
+| Milestone 6 - Tests and Quality Check | Next | Add or update tests and run full practical validation. |
 | Milestone 7 - Final Documentation and Delivery | Not started | Final README/Documentation updates, acceptance notes, and final validation. |
 
 ### Previous MVP Phase
@@ -1188,6 +1188,63 @@ Next step:
 
 ---
 
+### 2026-05-09 - Chinese UI Redesign Phase Milestone 5
+
+Date: 2026-05-09
+
+Milestone: Milestone 5 - Integration and Error Handling
+
+Files changed:
+
+- `scripts/check_android_chinese_text.ps1`
+- `scripts/check_safety_text.ps1`
+- `Documentation.md`
+
+Work completed:
+
+- Added an Android Chinese text scan that checks required Chinese UI phrases, rejects legacy English UI phrases, and flags common garbled text markers.
+- Extended the safety text scan with Chinese unlawful-evasion phrases prohibited by the active prompt.
+- Made both PowerShell scripts ASCII-only internally by constructing Chinese search phrases from Unicode code points, avoiding Windows PowerShell encoding parse failures.
+- Verified the new checks alongside Android tests, Android APK build, backend tests, and safety scan.
+
+Commands run:
+
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test`
+
+Results:
+
+- Android Chinese text scan passed.
+- Safety text scan passed.
+- Android unit tests passed.
+- Android debug APK build passed.
+- Backend tests passed.
+
+Failures:
+
+- First script run failed because Windows PowerShell parsed UTF-8 Chinese string literals in `.ps1` files as ANSI text.
+
+Fixes:
+
+- Rewrote the affected PowerShell scripts to avoid non-ASCII source literals while still scanning UTF-8 source files for Chinese phrases.
+
+Decisions:
+
+- Keep Chinese text validation as a repo script instead of adding a Gradle task, so it can run from PowerShell consistently with existing validation helpers.
+
+Assumptions:
+
+- The required Chinese phrase list should stay focused on core navigation, backend/demo states, report types, privacy copy, and admin/profile surfaces rather than every possible UI string.
+
+Next step:
+
+- Start Milestone 6 by running the full practical quality gate and fixing any failures.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -1202,6 +1259,7 @@ Next step:
 | 2026-05-09 | Archive old prompts under `docs/prompts/` and keep root `Prompt.md` as the active source of truth. | Preserves requirement history without confusing future implementation sessions. |
 | 2026-05-09 | Defer production map SDK integration from the Chinese UI redesign P0 scope. | The user wants SDK integration in a later version, while this phase should remain buildable without map credentials. |
 | 2026-05-09 | Use a lightweight Android `HttpURLConnection` client for the first backend connection milestone. | Avoids adding Retrofit/OkHttp before the core API workflow needs justify extra dependencies. |
+| 2026-05-09 | Keep PowerShell validation scripts ASCII-only internally when matching Chinese phrases. | Windows PowerShell may parse UTF-8 `.ps1` files without BOM incorrectly; Unicode code points keep the scripts portable. |
 
 ## Assumptions
 
@@ -1219,6 +1277,11 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Failed then passed | First run exposed PowerShell UTF-8 literal parsing issues; script was rewritten with ASCII source and Unicode code points, then passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Failed then passed | First run exposed the same PowerShell encoding issue after adding Chinese patterns; script was rewritten and rerun successfully. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 5 Android unit tests passed after validation script additions. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Chinese UI redesign Milestone 5 Android debug APK build passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests passed; no backend code changed in Milestone 5. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 4 Android unit tests passed, including accident Chinese fallback copy. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Chinese UI redesign Milestone 4 Android debug APK build passed. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests still pass; no backend code changed in Milestone 4. |
