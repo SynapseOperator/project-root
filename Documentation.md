@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Full integration phase Milestone 5 complete; ready for Milestone 6 full quality gate
+Full integration phase Milestone 6 complete; ready for Milestone 7 final handoff
 
 Last updated:
 
@@ -57,8 +57,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 3 - Core P0 Feature 2 | Completed | Leaderboard now loads backend rankings and profile can refresh backend user data, including points, reputation, title, role, and restriction state. |
 | Milestone 4 - Core P0 Feature 3 | Completed | Android admin panel now loads backend review queue, moderates reports and accidents, and submits user posting restrictions through backend admin APIs. |
 | Milestone 5 - Integration and Error Handling | Completed | Added AMap Android 3D SDK dependency, secure local key injection, provider fallback, MapView marker rendering, splash background, local configuration example, and README connection guide. |
-| Milestone 6 - Tests and Quality Check | Next | Run full Gradle/build/text/safety/TODO quality gate and fix failures. |
-| Milestone 7 - Final Documentation and Delivery | Not started | Final README/Documentation updates, acceptance notes, manual checklist, and final validation. |
+| Milestone 6 - Tests and Quality Check | Completed | Full Gradle `check`, backend boot jar, Android debug APK build, Chinese text scan, safety scan, TODO scan, and ADB device availability check were run. |
+| Milestone 7 - Final Documentation and Delivery | Next | Final README/Documentation updates, acceptance notes, manual checklist, and final validation. |
 
 ### Previous Chinese UI Redesign Phase
 
@@ -476,6 +476,65 @@ Assumptions:
 Next step:
 
 - Start Milestone 6 by running the full quality gate and fixing any failures.
+
+---
+
+### 2026-05-09 - Full Integration Phase Milestone 6
+
+Date: 2026-05-09
+
+Milestone: Milestone 6 - Tests and Quality Check
+
+Files changed:
+
+- `Documentation.md`
+
+Work completed:
+
+- Ran the full Gradle quality gate after backend, admin, and map SDK integration.
+- Built backend and Android debug artifacts.
+- Reran Android Chinese text, safety text, and TODO/FIXME scans.
+- Checked ADB device availability for manual UI validation readiness.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:bootJar`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1`
+- `adb devices`
+
+Results:
+
+- Full Gradle `check` passed, including Android lint, Android unit tests, release unit tests, and backend tests.
+- Backend boot jar build passed.
+- Android debug APK build passed.
+- Android Chinese text scan passed.
+- Safety text scan passed.
+- TODO/FIXME scan passed.
+- ADB is available, but no Android emulator or phone is currently attached.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Keep manual map/phone validation as a release checklist item because the current environment has no connected Android device.
+
+Assumptions:
+
+- JVM, lint, and APK validation are sufficient for this milestone's automated gate, while AMap rendering still requires a valid key and device.
+
+Next step:
+
+- Start Milestone 7 by finalizing README/Documentation handoff notes, acceptance checklist, and final validation status.
 
 ---
 
@@ -1870,6 +1929,13 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check` | Passed | Full integration Milestone 6 Gradle check passed, including Android lint, Android unit tests, release unit tests, and backend tests. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:bootJar` | Passed | Full integration Milestone 6 backend boot jar build passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 6 Android debug APK build passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Full integration Milestone 6 Android Chinese text scan passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Full integration Milestone 6 safety text scan passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1` | Passed | Full integration Milestone 6 TODO/FIXME scan passed. |
+| 2026-05-09 | `adb devices` | No devices attached | ADB daemon started and listed no connected emulator or phone. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Full integration Milestone 5 Android tests passed, including map provider config coverage. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 5 Android debug APK build passed with AMap SDK packaged; Gradle warned that `libAMapSDK_MAP_v10_0_600.so` could not be stripped and was packaged as-is. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests passed; backend code was unchanged in Milestone 5. |
