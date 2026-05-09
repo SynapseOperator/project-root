@@ -9,13 +9,13 @@ It records what Codex did, why it did it, what is currently complete, what faile
 Status:
 
 - [ ] Not started
-- [x] In progress
+- [ ] In progress
 - [ ] Blocked
-- [ ] Completed
+- [x] Completed
 
 Current milestone:
 
-Chinese UI redesign phase Milestone 6 complete; ready for Milestone 7 final documentation and handoff
+Chinese UI redesign phase Milestone 7 complete; all known tasks completed
 
 Last updated:
 
@@ -58,7 +58,7 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 4 - Core P0 Feature 3 | Completed | Accident board, profile, leaderboard, and demo admin pages now have clearer Chinese copy, local/demo boundaries, privacy notes, and role-aware admin visibility. |
 | Milestone 5 - Integration and Error Handling | Completed | Added Android Chinese text validation, strengthened safety phrase scanning for Chinese unlawful-evasion wording, and verified the scripts with Android/backend builds and tests. |
 | Milestone 6 - Tests and Quality Check | Completed | Full Gradle `check`, Android debug APK build, backend boot jar build, Chinese text scan, safety scan, TODO scan, and device availability check were run. |
-| Milestone 7 - Final Documentation and Delivery | Next | Final README/Documentation updates, acceptance notes, and final validation. |
+| Milestone 7 - Final Documentation and Delivery | Completed | README and Documentation were updated for the Chinese UI redesign phase, final validation was rerun, and remaining deferred work is documented. |
 
 ### Previous MVP Phase
 
@@ -1303,6 +1303,67 @@ Next step:
 
 ---
 
+### 2026-05-09 - Chinese UI Redesign Phase Milestone 7
+
+Date: 2026-05-09
+
+Milestone: Milestone 7 - Final Documentation and Delivery
+
+Files changed:
+
+- `README.md`
+- `Documentation.md`
+
+Work completed:
+
+- Rewrote README for the current Chinese UI redesign phase.
+- Documented the current Android surface: Chinese map-first UI, backend login/session, backend report list/create/detail/feedback, and local/demo accident/profile/leaderboard/admin pages.
+- Documented validation commands, Android API base URL behavior, backend API examples, privacy/safety notes, and deferred production map/accident/admin/leaderboard backend work.
+- Updated Documentation current status, milestone tracker, validation history, and final handoff notes.
+- Reran final validation after documentation changes.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:bootJar`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `adb devices`
+
+Results:
+
+- Full Gradle `check` passed.
+- Android Chinese text scan passed.
+- Safety text scan passed.
+- TODO/FIXME scan passed.
+- Backend boot jar build passed.
+- Android debug APK build passed.
+- `adb devices` listed no connected devices.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Keep README focused on the current implemented state and explicitly separate backend-connected P0 traffic flows from deferred local/demo surfaces.
+
+Assumptions:
+
+- The final handoff should preserve deferred scope rather than adding more implementation work beyond the active prompt.
+
+Next step:
+
+- Use an Android emulator or physical device for manual UI verification when available, then integrate a production map SDK in a later phase.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -1335,6 +1396,13 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check` | Passed | Final Chinese UI redesign Milestone 7 Gradle check passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Final Android Chinese text scan passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Final safety text scan passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1` | Passed | Final TODO/FIXME scan passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:bootJar` | Passed | Final backend boot jar build passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Final Android debug APK build passed. |
+| 2026-05-09 | `adb devices` | No devices attached | Final manual phone/emulator UI validation could not be run in this environment. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check` | Passed | Chinese UI redesign Milestone 6 full Gradle check passed, including Android lint, Android unit tests, and backend tests. |
 | 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Android Chinese text scan passed in the full quality gate. |
 | 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed in the full quality gate. |
@@ -1423,23 +1491,32 @@ Next step:
 | Android emulator or physical-device workflow validation was not run. | Medium | Open | No running Android device was available; validation used JVM tests, Android lint, and debug APK build. |
 | Docker Compose runtime validation was not run. | Medium | Open | Docker is not installed or not on `PATH` in this environment. |
 | Accident contact storage needs production-grade encryption. | High | Open | Contact values are hidden from public APIs and encoded internally, but real field encryption is still required before deployment. |
-| Android UI is not fully Simplified Chinese and visually polished. | High | Resolved for Milestone 1 shell | Main Android Compose screens now use Simplified Chinese and a polished map-first shell; later milestones still need backend states and final text checks. |
+| Android UI is not fully Simplified Chinese and visually polished. | High | Resolved for current phase | Main Android Compose screens now use Simplified Chinese, map-first structure, Chinese backend/demo states, and final text checks. |
 
 ## Final Handoff Notes
 
-Milestone execution is complete through Milestone 7.
+Chinese UI redesign phase milestone execution is complete through Milestone 7.
 
 Final deliverables:
 
 - Backend API: `backend/`
-- Android app: `android/`
+- Android app: `android/` with Simplified Chinese map-first Compose UI
 - Android debug APK path after build: `android/build/outputs/apk/debug/android-debug.apk`
 - PostgreSQL deployment path: `docker-compose.yml` and `Dockerfile.backend`
-- Validation helpers: `scripts/check_safety_text.ps1` and `scripts/check_no_todos.ps1`
+- Validation helpers: `scripts/check_android_chinese_text.ps1`, `scripts/check_safety_text.ps1`, and `scripts/check_no_todos.ps1`
+
+Implemented in this phase:
+
+- Android login and `/me` session display connect to backend APIs.
+- Android traffic report list, creation, detail refresh, and feedback connect to backend APIs.
+- Android UI uses Simplified Chinese main navigation and user-facing core workflow text.
+- Android home is map-first with a polished credential-free Compose mock map.
+- Accident board, leaderboard, and admin surfaces are Chinese local/demo pages with clear scope labels.
 
 Final validation status:
 
 - Full Gradle check passed.
+- Android Chinese text scan passed.
 - Backend boot jar build passed.
 - Android debug APK build passed.
 - Safety text scan passed.
@@ -1449,7 +1526,7 @@ Final validation status:
 
 Recommended next action:
 
-- Implement Android network repositories against `/api/v1` backend endpoints, integrate the production map provider behind the documented adapter, then run emulator or physical-device end-to-end validation with the Docker PostgreSQL backend.
+- Run emulator or physical-device end-to-end validation against a live backend, then integrate the production map provider behind the documented adapter in a later phase.
 
 ### 2026-05-09 - GitHub Repository Preparation
 
