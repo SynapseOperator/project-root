@@ -9,13 +9,13 @@ It records what Codex did, why it did it, what is currently complete, what faile
 Status:
 
 - [ ] Not started
-- [ ] In progress
+- [x] In progress
 - [ ] Blocked
-- [x] Completed
+- [ ] Completed
 
 Current milestone:
 
-Milestone 7 complete; all defined milestones completed
+Chinese UI redesign phase Milestone 0 complete; ready for Milestone 1 formal Android UI skeleton
 
 Last updated:
 
@@ -25,7 +25,7 @@ Last updated:
 
 Brief summary of what this project is building:
 
-This repository is now scoped to build Yuelu Traffic, a deployable Android-based crowdsourced traffic safety and incident reporting app for the Central South University and Lushan South Road area. The app will support map-based road condition reports, community validation, reputation and leaderboard mechanics, a privacy-aware accident board, and administrator moderation.
+This repository is now in the next Yuelu Traffic product phase. The app already builds and runs on Android; the current active goal is to upgrade it into a fully Simplified Chinese, visually polished, map-first Android app with backend-connected core traffic report workflows. The previous MVP requirements are archived under `docs/prompts/` and the root `Prompt.md` is the active requirement source.
 
 ## Technology Stack
 
@@ -33,7 +33,7 @@ Selected stack:
 
 - Android language: Kotlin
 - Android UI: Jetpack Compose with Material 3
-- Android architecture: Jetpack Compose local MVP screens with model tests; backend-networked repositories, DataStore, and production AMap integration remain documented follow-up work
+- Android architecture: Jetpack Compose app moving from local MVP screens toward formal multi-page UI, Simplified Chinese localization, and backend-connected core traffic report workflows
 - Backend language: Java 21
 - Backend framework: Spring Boot REST API
 - Database: PostgreSQL with Flyway migrations
@@ -43,9 +43,24 @@ Selected stack:
 
 Reason for selection:
 
-This stack keeps the Android client native, keeps the backend conservative and deployable, uses persistent relational storage, and supports a China-area map provider while allowing fake map adapters for tests and credential-free local validation.
+This stack remains suitable for the new phase because it keeps the Android client native, supports Compose-based UI redesign, reuses the existing Spring Boot APIs, and allows a credential-free polished mock map while production map SDK integration is deferred.
 
 ## Milestone Progress
+
+### Current Chinese UI Redesign Phase
+
+| Milestone | Status | Notes |
+|---|---|---|
+| Milestone 0 - Project Understanding and Setup | Completed | Active `Prompt.md` defines the Chinese localization, polished map-first UI, and Android backend-connected traffic workflow phase. Previous prompt is archived under `docs/prompts/`. |
+| Milestone 1 - Minimal Running Skeleton | Next | Build a formal multi-page Compose shell, centralized Chinese copy/design tokens, bottom navigation, and polished mock map skeleton. |
+| Milestone 2 - Core P0 Feature 1 | Not started | Connect Android student-number login/session display to backend while preserving Chinese privacy copy and fallback errors. |
+| Milestone 3 - Core P0 Feature 2 | Not started | Connect Android traffic report list, creation, detail, and feedback to backend. |
+| Milestone 4 - Core P0 Feature 3 | Not started | Polish local/demo accident board, profile/leaderboard, and admin pages in Chinese. |
+| Milestone 5 - Integration and Error Handling | Not started | Exercise integrated Android states, backend unavailable handling, and Chinese/safety text checks. |
+| Milestone 6 - Tests and Quality Check | Not started | Add or update tests and run full practical validation. |
+| Milestone 7 - Final Documentation and Delivery | Not started | Final README/Documentation updates, acceptance notes, and final validation. |
+
+### Previous MVP Phase
 
 | Milestone | Status | Notes |
 |---|---|---|
@@ -796,6 +811,130 @@ Next step:
 
 ---
 
+### 2026-05-09 - Active Prompt Updated for Chinese UI Redesign Phase
+
+Date: 2026-05-09
+
+Milestone: Requirements update before next implementation phase
+
+Files changed:
+
+- `Prompt.md`
+- `docs/prompts/2026-05-09-yuelu-traffic-mvp.md`
+- `Documentation.md`
+
+Work completed:
+
+- Archived the previous MVP product prompt under `docs/prompts/`.
+- Replaced the root `Prompt.md` with the active next-phase requirements.
+- Defined the next phase as full Simplified Chinese localization, a polished map-first Android UI redesign, formal multi-page Compose structure, and backend-connected core traffic report workflows.
+- Deferred production map SDK integration, accident board backend integration, admin backend integration, image upload, push notifications, and external data imports from P0.
+
+Commands run:
+
+- `Get-Content -Raw Prompt.md`
+- `Get-Content -Raw Plan.md`
+- `Get-Content -Raw Implement.md`
+- `Get-Content -Raw Documentation.md`
+- `New-Item -ItemType Directory -Force -Path docs\prompts`
+- `Copy-Item -LiteralPath Prompt.md -Destination docs\prompts\2026-05-09-yuelu-traffic-mvp.md -Force`
+
+Results:
+
+- The active root `Prompt.md` now describes the Chinese localization and UI redesign phase.
+- The previous prompt remains available as a historical snapshot.
+- No application code was changed.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Keep `Yuelu Traffic` as the app display name.
+- Use a fresh campus green visual direction with high-contrast text and playful but restrained student-facing copy.
+- Keep production map SDK integration out of this phase's P0 scope.
+- Prioritize backend connection for Android login, report list, report creation, and report feedback only.
+
+Assumptions:
+
+- The next engineering session should treat root `Prompt.md` as active and archived prompts as historical context only.
+- Existing backend APIs remain the preferred integration target unless implementation reveals a concrete mismatch.
+
+Next step:
+
+- Start implementation for the new phase by refactoring the Android UI into a formal multi-page Compose structure, centralizing Chinese copy/design tokens, and wiring core traffic workflows to the backend.
+
+---
+
+### 2026-05-09 - Chinese UI Redesign Phase Milestone 0
+
+Date: 2026-05-09
+
+Milestone: Milestone 0 - Project Understanding and Setup
+
+Files changed:
+
+- `Prompt.md`
+- `docs/prompts/2026-05-09-yuelu-traffic-mvp.md`
+- `Documentation.md`
+
+Work completed:
+
+- Re-read `Prompt.md`, `Plan.md`, `Implement.md`, `AGENTS.md`, and `Documentation.md`.
+- Confirmed the active phase scope: Simplified Chinese Android UI, polished map-first product shell, and backend-connected core traffic report workflows.
+- Confirmed non-goals: production map SDK integration, full accident/admin backend connection, route planning, push notifications, images, and web admin dashboard.
+- Added a current-phase milestone tracker so the new phase can run from Milestone 1 without overwriting previous MVP history.
+- Confirmed existing backend APIs should be reused for login, traffic report list, traffic report creation, and report feedback.
+
+Commands run:
+
+- `Get-Content -Raw -LiteralPath .\Prompt.md`
+- `Get-Content -Raw -LiteralPath .\Plan.md`
+- `Get-Content -Raw -LiteralPath .\Implement.md`
+- `Get-Content -Raw -LiteralPath .\Documentation.md`
+- `Get-Content -Raw -LiteralPath .\AGENTS.md`
+- `git status --short --branch`
+- `git diff --stat`
+- `rg --files android/src backend/src scripts docs`
+- `adb devices`
+
+Results:
+
+- Active requirements are sufficient to start implementation.
+- Android source currently contains English UI text and local-state screens that must be replaced or refactored.
+- No Android device or emulator is connected according to `adb devices`.
+- The repository is on `main` with active Prompt/Documentation changes from the requirement update.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Restart the Plan milestone sequence for this new Prompt phase while preserving previous MVP milestone history in Documentation.
+- Keep backend schema and API unchanged unless Android integration reveals a concrete mismatch.
+- Validate device UI manually only if an emulator or phone becomes available; otherwise record the environment limitation.
+
+Assumptions:
+
+- The existing Spring Boot backend API contract is the intended Android integration target.
+- A polished Compose mock map satisfies this phase while production map SDK integration remains deferred.
+
+Next step:
+
+- Start Milestone 1 by replacing the rough local-state single-screen app with a formal Chinese multi-page Compose shell and design system.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -807,6 +946,8 @@ Next step:
 | 2026-05-09 | Use Kotlin, Jetpack Compose, Java 21 Spring Boot, PostgreSQL, Flyway, and Gradle for MVP implementation. | This is a conservative deployable Android/backend stack that fits the P0 scope without adding a separate web frontend. |
 | 2026-05-09 | Wrap AMap behind a map-provider adapter. | The pilot area is in China, but local tests should not require map credentials. |
 | 2026-05-09 | Keep P0 admin functionality inside the Android app unless requirements change. | Avoids adding a web frontend stack before it is necessary. |
+| 2026-05-09 | Archive old prompts under `docs/prompts/` and keep root `Prompt.md` as the active source of truth. | Preserves requirement history without confusing future implementation sessions. |
+| 2026-05-09 | Defer production map SDK integration from the Chinese UI redesign P0 scope. | The user wants SDK integration in a later version, while this phase should remain buildable without map credentials. |
 
 ## Assumptions
 
@@ -817,11 +958,14 @@ Next step:
 | 2026-05-09 | Student number login is a lightweight app identifier, not formal university identity verification. | The user requested student number input but specified it is only for distinguishing users. | Additional privacy and storage decisions are still needed during implementation planning. |
 | 2026-05-09 | AMap SDK credentials may be unavailable in local development. | Map SDK services commonly require keys, but Milestone 1 should still be buildable. | A fake map adapter and manual production map check are needed. |
 | 2026-05-09 | PostgreSQL without PostGIS is enough for MVP. | The pilot area is small and bounding-box filtering is sufficient for first implementation. | Larger coverage or radius queries may later require PostGIS migration. |
+| 2026-05-09 | Existing backend APIs can support the next phase's P0 Android integration. | The current backend already has tested auth, report listing, report creation, and report feedback APIs. | Some Android API adapter changes may still be needed after implementation starts. |
 
 ## Validation History
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `Select-String -Path Prompt.md -Pattern 'Simplified Chinese\|简体中文\|Backend\|后端\|map\|地图\|Production map SDK\|生产地图'` | Passed | Confirmed the active prompt contains the Chinese UI, map-first, backend integration, and production map deferral requirements for the new phase. |
+| 2026-05-09 | `Test-Path docs\prompts\2026-05-09-yuelu-traffic-mvp.md` | Passed | Confirmed the previous MVP prompt archive exists before starting the new milestone sequence. |
 | 2026-05-09 | `Get-ChildItem -Force` | Passed | Confirmed initial directory state and created workbench directories. |
 | 2026-05-09 | `git rev-parse --is-inside-work-tree` | Not a git repository | No milestone commit was created. |
 | 2026-05-09 | `gh auth status` | Not available | GitHub CLI is not installed in this environment. |
@@ -877,6 +1021,7 @@ Next step:
 | Android emulator or physical-device workflow validation was not run. | Medium | Open | No running Android device was available; validation used JVM tests, Android lint, and debug APK build. |
 | Docker Compose runtime validation was not run. | Medium | Open | Docker is not installed or not on `PATH` in this environment. |
 | Accident contact storage needs production-grade encryption. | High | Open | Contact values are hidden from public APIs and encoded internally, but real field encryption is still required before deployment. |
+| Android UI is not fully Simplified Chinese and visually polished. | High | Open | This is now the active P0 focus in root `Prompt.md`. |
 
 ## Final Handoff Notes
 
