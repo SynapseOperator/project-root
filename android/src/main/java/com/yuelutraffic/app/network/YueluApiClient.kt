@@ -3,11 +3,17 @@ package com.yuelutraffic.app.network
 import android.os.Handler
 import android.os.Looper
 import com.yuelutraffic.app.BuildConfig
+import com.yuelutraffic.app.traffic.FeedbackChoice
+import com.yuelutraffic.app.traffic.TrafficReportStatus
+import com.yuelutraffic.app.traffic.TrafficReportType
+import com.yuelutraffic.app.traffic.TrafficReportUi
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Instant
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import org.json.JSONArray
 import org.json.JSONObject
 
 sealed class ApiResult<out T> {
@@ -54,6 +60,58 @@ class YueluApiClient(
         }
     }
 
+    fun listTrafficReports(callback: (ApiResult<List<TrafficReportUi>>) -> Unit) {
+        execute(callback) {
+            parseTrafficReports(
+                getJson(
+                    path = "/api/v1/reports?minLat=28.1200&minLng=112.8800&maxLat=28.2200&maxLng=113.0000",
+                    accessToken = null,
+                ),
+            )
+        }
+    }
+
+    fun fetchReportDetail(reportId: String, callback: (ApiResult<TrafficReportUi>) -> Unit) {
+        execute(callback) {
+            parseTrafficReport(getJson(path = "/api/v1/reports/$reportId", accessToken = null))
+        }
+    }
+
+    fun createTrafficReport(
+        accessToken: String,
+        type: TrafficReportType,
+        locationLabel: String,
+        description: String,
+        callback: (ApiResult<TrafficReportUi>) -> Unit,
+    ) {
+        execute(callback) {
+            parseTrafficReport(
+                postJson(
+                    path = "/api/v1/reports",
+                    body = createReportRequestBody(type, locationLabel, description),
+                    accessToken = accessToken,
+                ),
+            )
+        }
+    }
+
+    fun sendReportFeedback(
+        accessToken: String,
+        reportId: String,
+        choice: FeedbackChoice,
+        callback: (ApiResult<TrafficReportUi>) -> Unit,
+    ) {
+        execute(callback) {
+            parseTrafficReport(
+                postJson(
+                    path = "/api/v1/reports/$reportId/feedback",
+                    body = feedbackRequestBody(choice),
+                    accessToken = accessToken,
+                ),
+            )
+        }
+    }
+
     private fun <T> execute(callback: (ApiResult<T>) -> Unit, block: () -> T) {
         ioExecutor.execute {
             val result = try {
@@ -83,7 +141,7 @@ class YueluApiClient(
         return request(path = path, method = "POST", body = body, accessToken = accessToken)
     }
 
-    private fun getJson(path: String, accessToken: String): String {
+    private fun getJson(path: String, accessToken: String?): String {
         return request(path = path, method = "GET", body = null, accessToken = accessToken)
     }
 
@@ -130,6 +188,27 @@ internal fun studentLoginRequestBody(studentNumber: String, privacyAcknowledged:
     return "{\"studentNumber\":\"${escapeJson(studentNumber.trim())}\",\"privacyAcknowledged\":$privacyAcknowledged}"
 }
 
+internal fun createReportRequestBody(
+    type: TrafficReportType,
+    locationLabel: String,
+    description: String,
+): String {
+    return buildString {
+        append("{")
+        append("\"type\":\"").append(type.name).append("\",")
+        append("\"latitude\":28.1703,")
+        append("\"longitude\":112.9388,")
+        append("\"locationLabel\":\"").append(escapeJson(locationLabel.trim())).append("\",")
+        append("\"description\":\"").append(escapeJson(description.trim())).append("\",")
+        append("\"initialCredibility\":").append(type.baseConfidence)
+        append("}")
+    }
+}
+
+internal fun feedbackRequestBody(choice: FeedbackChoice): String {
+    return "{\"feedbackType\":\"${choice.name}\"}"
+}
+
 internal fun parseAuthSession(json: String): BackendAuthSession {
     val root = JSONObject(json)
     return BackendAuthSession(
@@ -144,6 +223,17 @@ internal fun parseUserProfile(json: String): BackendUserProfile {
     return parseUserProfile(JSONObject(json))
 }
 
+internal fun parseTrafficReports(json: String): List<TrafficReportUi> {
+    val array = JSONArray(json)
+    return List(array.length()) { index ->
+        parseTrafficReport(array.getJSONObject(index))
+    }
+}
+
+internal fun parseTrafficReport(json: String): TrafficReportUi {
+    return parseTrafficReport(JSONObject(json))
+}
+
 private fun parseUserProfile(json: JSONObject): BackendUserProfile {
     return BackendUserProfile(
         id = json.optString("id"),
@@ -154,6 +244,33 @@ private fun parseUserProfile(json: JSONObject): BackendUserProfile {
         titleCode = json.optString("titleCode", "ROAD_HELPER"),
         postingBanUntil = json.optString("postingBanUntil").ifBlank { null },
     )
+}
+
+private fun parseTrafficReport(json: JSONObject): TrafficReportUi {
+    return TrafficReportUi(
+        id = json.optString("id"),
+        type = reportTypeFromApi(json.optString("type")),
+        latitude = json.optDouble("latitude", 28.1703),
+        longitude = json.optDouble("longitude", 112.9388),
+        locationLabel = json.optString("locationLabel", "中南大学 / 麓山南路"),
+        description = json.optString("description"),
+        submittedAt = parseInstantOrNow(json.optString("submittedAt")),
+        defaultExpiresAt = parseInstantOrNow(json.optString("defaultExpiresAt")),
+        status = reportStatusFromApi(json.optString("status")),
+        confidenceScore = json.optInt("confidenceScore", json.optInt("initialCredibility", 50)),
+    )
+}
+
+private fun reportTypeFromApi(value: String): TrafficReportType {
+    return TrafficReportType.entries.firstOrNull { it.name == value } ?: TrafficReportType.CONGESTION
+}
+
+private fun reportStatusFromApi(value: String): TrafficReportStatus {
+    return TrafficReportStatus.entries.firstOrNull { it.name == value } ?: TrafficReportStatus.UNDER_REVIEW
+}
+
+private fun parseInstantOrNow(value: String): Instant {
+    return runCatching { Instant.parse(value) }.getOrElse { Instant.now() }
 }
 
 private fun escapeJson(value: String): String {

@@ -3,6 +3,9 @@ package com.yuelutraffic.app.network
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.yuelutraffic.app.traffic.FeedbackChoice
+import com.yuelutraffic.app.traffic.TrafficReportStatus
+import com.yuelutraffic.app.traffic.TrafficReportType
 
 class YueluApiClientTest {
 
@@ -42,5 +45,47 @@ class YueluApiClientTest {
         assertEquals("ADMIN", session.user.role)
         assertEquals(70, session.user.reputationScore)
         assertTrue(session.newUser)
+    }
+
+    @Test
+    fun reportRequestBodiesMatchBackendContract() {
+        val createBody = createReportRequestBody(
+            type = TrafficReportType.CONGESTION,
+            locationLabel = " 麓山南路\"校门 ",
+            description = " 车流缓慢\\请谨慎通行 ",
+        )
+
+        assertTrue(createBody.contains("\"type\":\"CONGESTION\""))
+        assertTrue(createBody.contains("\"locationLabel\":\"麓山南路\\\"校门\""))
+        assertTrue(createBody.contains("\"description\":\"车流缓慢\\\\请谨慎通行\""))
+        assertEquals("{\"feedbackType\":\"MARK_EXPIRED\"}", feedbackRequestBody(FeedbackChoice.MARK_EXPIRED))
+    }
+
+    @Test
+    fun reportParserReadsBackendReportShape() {
+        val reports = parseTrafficReports(
+            """
+            [
+              {
+                "id": "22222222-2222-2222-2222-222222222222",
+                "type": "CONSTRUCTION",
+                "latitude": 28.17,
+                "longitude": 112.93,
+                "locationLabel": "麓山南路",
+                "description": "施工占道",
+                "submittedAt": "2026-05-09T08:00:00Z",
+                "defaultExpiresAt": "2026-05-09T20:00:00Z",
+                "status": "ACTIVE",
+                "initialCredibility": 50,
+                "confidenceScore": 58
+              }
+            ]
+            """.trimIndent(),
+        )
+
+        assertEquals(1, reports.size)
+        assertEquals(TrafficReportType.CONSTRUCTION, reports.first().type)
+        assertEquals(TrafficReportStatus.ACTIVE, reports.first().status)
+        assertEquals(58, reports.first().confidenceScore)
     }
 }

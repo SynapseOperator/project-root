@@ -37,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -129,7 +130,7 @@ fun YueluTrafficApp() {
                 },
             )
         } else {
-            MainShell(session = signedInSession)
+            MainShell(session = signedInSession, apiClient = apiClient)
         }
     }
 }
@@ -222,12 +223,130 @@ private fun LoginScreen(
 }
 
 @Composable
-private fun MainShell(session: StudentSessionUi) {
+private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
     val reports = remember { mutableStateListOf<TrafficReportUi>().also { it.addAll(sampleTrafficReports()) } }
     val accidents = remember { mutableStateListOf<AccidentPostUi>().also { it.addAll(sampleAccidentPosts()) } }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Map) }
     var postingRestricted by rememberSaveable { mutableStateOf(false) }
     var selectedReport by remember { mutableStateOf<TrafficReportUi?>(null) }
+    var isReportLoading by rememberSaveable { mutableStateOf(false) }
+    var isReportSubmitting by rememberSaveable { mutableStateOf(false) }
+    var reportStatusMessage by rememberSaveable {
+        mutableStateOf(
+            if (session.isDemoMode) {
+                "当前显示本地演示路况，未连接后端列表。"
+            } else {
+                "正在从后端加载麓山南路附近路况。"
+            },
+        )
+    }
+
+    fun replaceReport(updated: TrafficReportUi) {
+        val index = reports.indexOfFirst { it.id == updated.id }
+        if (index >= 0) {
+            reports[index] = updated
+        } else {
+            reports.add(0, updated)
+        }
+        if (selectedReport?.id == updated.id) {
+            selectedReport = updated
+        }
+    }
+
+    fun loadBackendReports() {
+        if (session.isDemoMode) {
+            reportStatusMessage = "当前显示本地演示路况，未连接后端列表。"
+            return
+        }
+        isReportLoading = true
+        reportStatusMessage = "正在同步后端路况。"
+        apiClient.listTrafficReports { result ->
+            isReportLoading = false
+            when (result) {
+                is ApiResult.Success -> {
+                    reports.clear()
+                    reports.addAll(result.value)
+                    reportStatusMessage = "已从后端加载 ${result.value.size} 条附近路况。"
+                }
+                is ApiResult.Failure -> {
+                    if (reports.isEmpty()) {
+                        reports.addAll(sampleTrafficReports())
+                    }
+                    reportStatusMessage = "后端路况加载失败：${result.message} 当前显示本地演示路况。"
+                }
+            }
+        }
+    }
+
+    fun selectReport(report: TrafficReportUi) {
+        selectedReport = report
+        if (!session.isDemoMode) {
+            apiClient.fetchReportDetail(report.id) { result ->
+                when (result) {
+                    is ApiResult.Success -> replaceReport(result.value)
+                    is ApiResult.Failure -> {
+                        reportStatusMessage = "详情刷新失败：${result.message}"
+                    }
+                }
+            }
+        }
+    }
+
+    fun submitReport(type: TrafficReportType, locationLabel: String, description: String) {
+        if (session.isDemoMode || session.accessToken == null) {
+            val report = createTrafficReport(type, locationLabel, description)
+            reports.add(0, report)
+            selectedReport = report
+            selectedTab = MainTab.Map
+            reportStatusMessage = "本地演示上报已添加，未同步到后端。"
+            return
+        }
+        isReportSubmitting = true
+        reportStatusMessage = "正在提交到后端。"
+        apiClient.createTrafficReport(session.accessToken, type, locationLabel, description) { result ->
+            isReportSubmitting = false
+            when (result) {
+                is ApiResult.Success -> {
+                    replaceReport(result.value)
+                    selectedReport = result.value
+                    selectedTab = MainTab.Map
+                    reportStatusMessage = "路况已提交到后端。"
+                }
+                is ApiResult.Failure -> {
+                    reportStatusMessage = "路况提交失败：${result.message}"
+                }
+            }
+        }
+    }
+
+    fun applyReportFeedback(reportId: String, choice: FeedbackChoice) {
+        if (session.isDemoMode || session.accessToken == null) {
+            val index = reports.indexOfFirst { it.id == reportId }
+            if (index >= 0) {
+                reports[index] = reports[index].applyFeedback(choice)
+                if (selectedReport?.id == reportId) selectedReport = reports[index]
+            }
+            reportStatusMessage = "本地演示反馈已记录，未同步到后端。"
+            return
+        }
+        apiClient.sendReportFeedback(session.accessToken, reportId, choice) { result ->
+            when (result) {
+                is ApiResult.Success -> {
+                    replaceReport(result.value)
+                    reportStatusMessage = "反馈已同步到后端。"
+                }
+                is ApiResult.Failure -> {
+                    reportStatusMessage = "反馈提交失败：${result.message}"
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(session.accessToken, session.isDemoMode) {
+        if (!session.isDemoMode) {
+            loadBackendReports()
+        }
+    }
 
     Scaffold(
         containerColor = YueluColors.Page,
@@ -253,19 +372,20 @@ private fun MainShell(session: StudentSessionUi) {
             MainTab.Map -> MapHomeScreen(
                 session = session,
                 reports = reports,
-                onSelectReport = { selectedReport = it },
-                onFeedback = { reportId, choice ->
-                    val index = reports.indexOfFirst { it.id == reportId }
-                    if (index >= 0) reports[index] = reports[index].applyFeedback(choice)
-                },
+                reportStatusMessage = reportStatusMessage,
+                isReportLoading = isReportLoading,
+                onRefreshReports = { loadBackendReports() },
+                onSelectReport = { selectReport(it) },
+                onFeedback = { reportId, choice -> applyReportFeedback(reportId, choice) },
                 contentPadding = innerPadding,
             )
             MainTab.Report -> SubmitReportScreen(
                 postingRestricted = postingRestricted,
-                onSubmit = { report ->
-                    reports.add(0, report)
-                    selectedTab = MainTab.Map
-                    selectedReport = report
+                isSubmitting = isReportSubmitting,
+                statusMessage = reportStatusMessage,
+                isBackendMode = !session.isDemoMode,
+                onSubmit = { type, locationLabel, description ->
+                    submitReport(type, locationLabel, description)
                 },
                 contentPadding = innerPadding,
             )
@@ -304,12 +424,7 @@ private fun MainShell(session: StudentSessionUi) {
             report = report,
             onDismiss = { selectedReport = null },
             onFeedback = { choice ->
-                val index = reports.indexOfFirst { it.id == report.id }
-                if (index >= 0) {
-                    val updated = reports[index].applyFeedback(choice)
-                    reports[index] = updated
-                    selectedReport = updated
-                }
+                applyReportFeedback(report.id, choice)
             },
         )
     }
@@ -319,6 +434,9 @@ private fun MainShell(session: StudentSessionUi) {
 private fun MapHomeScreen(
     session: StudentSessionUi,
     reports: List<TrafficReportUi>,
+    reportStatusMessage: String,
+    isReportLoading: Boolean,
+    onRefreshReports: () -> Unit,
     onSelectReport: (TrafficReportUi) -> Unit,
     onFeedback: (String, FeedbackChoice) -> Unit,
     contentPadding: PaddingValues,
@@ -340,9 +458,18 @@ private fun MapHomeScreen(
         }
         item {
             StatusNotice(
-                title = if (session.isDemoMode) "演示模式" else "后端在线",
-                body = session.connectionMessage,
+                title = if (session.isDemoMode) "演示模式" else if (isReportLoading) "正在同步" else "后端路况",
+                body = "${session.connectionMessage} $reportStatusMessage",
             )
+        }
+        item {
+            OutlinedButton(
+                enabled = !isReportLoading,
+                onClick = onRefreshReports,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (isReportLoading) "正在刷新路况" else "刷新路况")
+            }
         }
         item {
             MockMapPanel(reports = reports, onSelectReport = onSelectReport)
@@ -360,7 +487,10 @@ private fun MapHomeScreen(
 @Composable
 private fun SubmitReportScreen(
     postingRestricted: Boolean,
-    onSubmit: (TrafficReportUi) -> Unit,
+    isSubmitting: Boolean,
+    statusMessage: String,
+    isBackendMode: Boolean,
+    onSubmit: (TrafficReportType, String, String) -> Unit,
     contentPadding: PaddingValues,
 ) {
     var selectedType by rememberSaveable { mutableStateOf(TrafficReportType.CONGESTION) }
@@ -392,6 +522,12 @@ private fun SubmitReportScreen(
             }
         }
         item {
+            StatusNotice(
+                title = if (isBackendMode) "后端提交" else "演示提交",
+                body = statusMessage,
+            )
+        }
+        item {
             ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface)) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -420,14 +556,14 @@ private fun SubmitReportScreen(
                         minLines = 3,
                     )
                     Button(
-                        enabled = !postingRestricted && locationLabel.isNotBlank(),
+                        enabled = !postingRestricted && !isSubmitting && locationLabel.isNotBlank(),
                         onClick = {
-                            onSubmit(createTrafficReport(selectedType, locationLabel, description))
+                            onSubmit(selectedType, locationLabel, description)
                             description = ""
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("提交路况")
+                        Text(if (isSubmitting) "正在提交" else if (isBackendMode) "提交到后端" else "提交演示路况")
                     }
                     Text(
                         text = AppCopy.lawfulUse,

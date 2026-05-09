@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Chinese UI redesign phase Milestone 2 complete; ready for Milestone 3 traffic report backend integration
+Chinese UI redesign phase Milestone 3 complete; ready for Milestone 4 Chinese polish for accident/profile/leaderboard/admin pages
 
 Last updated:
 
@@ -54,8 +54,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 0 - Project Understanding and Setup | Completed | Active `Prompt.md` defines the Chinese localization, polished map-first UI, and Android backend-connected traffic workflow phase. Previous prompt is archived under `docs/prompts/`. |
 | Milestone 1 - Minimal Running Skeleton | Completed | Replaced the rough local UI with a formal Simplified Chinese Compose shell, centralized copy/design tokens, Chinese bottom navigation, polished mock map, report detail dialog, and local/demo profile, accident, leaderboard, and admin surfaces. |
 | Milestone 2 - Core P0 Feature 1 | Completed | Android login now calls backend `/api/v1/auth/student`, refreshes current user with `/api/v1/me`, uses configurable `API_BASE_URL`, shows Chinese loading/error/demo states, and keeps student-number privacy copy in Chinese. |
-| Milestone 3 - Core P0 Feature 2 | Next | Connect Android traffic report list, creation, detail, and feedback to backend. |
-| Milestone 4 - Core P0 Feature 3 | Not started | Polish local/demo accident board, profile/leaderboard, and admin pages in Chinese. |
+| Milestone 3 - Core P0 Feature 2 | Completed | Android traffic report list, detail refresh, creation, and feedback now use backend APIs when logged in online, with clearly labeled local demo fallback. |
+| Milestone 4 - Core P0 Feature 3 | Next | Polish local/demo accident board, profile/leaderboard, and admin pages in Chinese. |
 | Milestone 5 - Integration and Error Handling | Not started | Exercise integrated Android states, backend unavailable handling, and Chinese/safety text checks. |
 | Milestone 6 - Tests and Quality Check | Not started | Add or update tests and run full practical validation. |
 | Milestone 7 - Final Documentation and Delivery | Not started | Final README/Documentation updates, acceptance notes, and final validation. |
@@ -1067,6 +1067,68 @@ Next step:
 
 ---
 
+### 2026-05-09 - Chinese UI Redesign Phase Milestone 3
+
+Date: 2026-05-09
+
+Milestone: Milestone 3 - Core P0 Feature 2
+
+Files changed:
+
+- `android/src/main/java/com/yuelutraffic/app/network/YueluApiClient.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/YueluTrafficApp.kt`
+- `android/src/test/java/com/yuelutraffic/app/network/YueluApiClientTest.kt`
+- `Documentation.md`
+
+Work completed:
+
+- Added Android API client methods for traffic report list, report detail, report creation, and report feedback.
+- Mapped backend `ReportResponse` JSON into the existing Android `TrafficReportUi` model.
+- Connected the map home screen to refresh backend reports after online login.
+- Connected report marker/detail selection to backend detail refresh.
+- Connected report submission to backend `POST /api/v1/reports` when an access token is available.
+- Connected feedback actions to backend `POST /api/v1/reports/{id}/feedback` when an access token is available.
+- Preserved explicit local demo behavior when the app is in demo mode or backend report loading fails.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+
+Results:
+
+- Android unit tests passed, including report request body and response parsing checks.
+- Android debug APK build passed.
+- Backend tests passed; backend code was not changed, but the report API contract was rechecked.
+- Safety text scan passed.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Keep report list coordinates fixed to the current pilot area bounding box for this phase.
+- Keep report feedback local-only in demo mode and backend-synced only for online authenticated sessions.
+- Do not connect accident board, leaderboard, or admin APIs in this milestone because they are deferred from this phase's P0 backend scope.
+
+Assumptions:
+
+- The existing report API response fields are sufficient for Android UI; confirm/expired feedback counts are still local-only display data.
+- A production map provider will later supply real viewport bounds, replacing the current fixed pilot-area query.
+
+Next step:
+
+- Start Milestone 4 by tightening the Chinese accident board, profile, leaderboard, and admin/demo surfaces without expanding their backend scope.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -1098,6 +1160,10 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 3 Android unit tests passed, including traffic report request/response adapter tests. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Chinese UI redesign Milestone 3 Android debug APK build passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend report API contract tests still pass after Android report integration. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed after traffic report backend wiring. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 2 Android unit tests passed, including backend login request/response adapter tests. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Chinese UI redesign Milestone 2 Android debug APK build passed. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend auth/session contract tests still pass after Android login integration. |
@@ -1160,7 +1226,7 @@ Next step:
 |---|---|---|---|
 | `Prompt.md` is not filled with a concrete project yet. | Medium | Resolved | `Prompt.md` now defines Yuelu Traffic requirements. |
 | GitHub remote is not configured. | Low | Resolved | `origin` is configured as `https://github.com/SynapseOperator/project-root.git`. |
-| Android UI is not yet connected to backend APIs. | High | Partially resolved | Login and `/me` session display are backend-connected; traffic report list/create/feedback remain for Milestone 3. |
+| Android UI is not yet connected to backend APIs. | High | Resolved for current P0 | Login, `/me`, traffic report list, traffic report creation, detail refresh, and feedback are backend-connected; accident/admin/leaderboard backend connection remains deferred by the active prompt. |
 | Production AMap SDK view is not integrated. | High | Open | Android uses a credential-free Compose map-style panel. AMap credentials and provider adapter integration remain. |
 | Android emulator or physical-device workflow validation was not run. | Medium | Open | No running Android device was available; validation used JVM tests, Android lint, and debug APK build. |
 | Docker Compose runtime validation was not run. | Medium | Open | Docker is not installed or not on `PATH` in this environment. |
