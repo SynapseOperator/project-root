@@ -1,6 +1,23 @@
 spring:
   application:
     name: yuelu-traffic-backend
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:file:./backend/build/dev-db/yuelu;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
 
 server:
   port: ${PORT:8080}
+
+app:
+  security:
+    student-pepper: ${YUELU_STUDENT_PEPPER:dev-local-pepper-change-for-prod}
+    token-secret: ${YUELU_TOKEN_SECRET:dev-local-token-secret-change-for-prod}
+    admin-student-numbers: ${YUELU_ADMIN_STUDENT_NUMBERS:ADMIN-DEMO}

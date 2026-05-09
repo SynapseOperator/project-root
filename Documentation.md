@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Milestone 1 complete; ready for Milestone 2 core P0 feature 1
+Milestone 2 complete; ready for Milestone 3 core P0 feature 2
 
 Last updated:
 
@@ -51,8 +51,8 @@ This stack keeps the Android client native, keeps the backend conservative and d
 |---|---|---|
 | Milestone 0 — Project Understanding and Setup | Completed | Technical stack, architecture, module boundaries, data model draft, API draft, and validation strategy recorded in `docs/Architecture.md`. |
 | Milestone 1 — Minimal Running Skeleton | Completed | Root Gradle multi-project, Spring Boot health endpoint, Compose Android startup screen, wrapper, README run instructions, and validation commands are in place. |
-| Milestone 2 — Core P0 Feature 1 | Next | Implement lightweight student-number entry/auth, privacy notice, hashed backend identifier, and non-sensitive public user display. |
-| Milestone 3 — Core P0 Feature 2 | Not started | |
+| Milestone 2 — Core P0 Feature 1 | Completed | Implemented student-number login with privacy acknowledgement, backend hashing, bearer token, `/me`, public leaderboard redaction, Android privacy entry screen, and tests. |
+| Milestone 3 — Core P0 Feature 2 | Next | Implement traffic reports, map marker data, default expiration, feedback, confidence, reputation, points, and leaderboard updates. |
 | Milestone 4 — Core P0 Feature 3 | Not started | |
 | Milestone 5 — Integration and Error Handling | Not started | |
 | Milestone 6 — Tests and Quality Check | Not started | |
@@ -366,6 +366,89 @@ Next step:
 
 ---
 
+### 2026-05-09 - Milestone 2 Student Identifier and Privacy Login
+
+Date: 2026-05-09
+
+Milestone: Milestone 2 - Core P0 Feature 1
+
+Files changed:
+
+- `backend/build.gradle`
+- `backend/src/main/resources/application.yml`
+- `backend/src/main/resources/application-test.yml`
+- `backend/src/main/resources/db/migration/V1__create_users.sql`
+- `backend/src/main/java/com/yuelutraffic/common/ApiError.java`
+- `backend/src/main/java/com/yuelutraffic/common/ApiException.java`
+- `backend/src/main/java/com/yuelutraffic/common/ApiExceptionHandler.java`
+- `backend/src/main/java/com/yuelutraffic/auth/AuthRequest.java`
+- `backend/src/main/java/com/yuelutraffic/auth/AuthResponse.java`
+- `backend/src/main/java/com/yuelutraffic/auth/AuthService.java`
+- `backend/src/main/java/com/yuelutraffic/auth/AuthController.java`
+- `backend/src/main/java/com/yuelutraffic/auth/TokenService.java`
+- `backend/src/main/java/com/yuelutraffic/user/AppUser.java`
+- `backend/src/main/java/com/yuelutraffic/user/AppUserRepository.java`
+- `backend/src/main/java/com/yuelutraffic/user/UserController.java`
+- `backend/src/main/java/com/yuelutraffic/user/UserRole.java`
+- `backend/src/main/java/com/yuelutraffic/user/UserSummary.java`
+- `backend/src/test/java/com/yuelutraffic/auth/AuthApiTest.java`
+- `android/src/main/java/com/yuelutraffic/app/MainActivity.kt`
+- `android/src/main/java/com/yuelutraffic/app/auth/PrivacyCopy.kt`
+- `android/src/test/java/com/yuelutraffic/app/auth/PrivacyCopyTest.kt`
+- `README.md`
+- `Documentation.md`
+
+Work completed:
+
+- Added Flyway-managed `app_users` persistence.
+- Added lightweight student-number login at `POST /api/v1/auth/student`.
+- Stored only a salted hash of the normalized student number.
+- Added non-sensitive public user codes, bearer token issuance, `GET /api/v1/me`, and `GET /api/v1/leaderboard`.
+- Added API error handling for validation and authentication failures.
+- Added Android student-number entry with explicit privacy acknowledgement before entering the app.
+- Added Android public code generation that does not display the entered student number.
+- Added README API examples for login, current user, and leaderboard.
+
+Commands run:
+
+- `.\gradlew.bat :backend:test`
+- `.\gradlew.bat :android:testDebugUnitTest`
+- `.\gradlew.bat :backend:bootJar`
+- `.\gradlew.bat :android:assembleDebug`
+
+Results:
+
+- Backend tests passed, including privacy acknowledgement, repeated login, `/me`, and leaderboard redaction checks.
+- Android debug unit tests passed, including privacy copy and public code redaction checks.
+- Backend boot jar build passed.
+- Android debug APK build passed.
+
+Failures:
+
+- None during Milestone 2 validation.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Use H2 file storage as the credential-free local default and keep PostgreSQL driver/configuration for deployable environments.
+- Use Flyway migrations from the start so the persistent schema is explicit.
+- Use HMAC-signed bearer tokens without adding Spring Security yet; role protection can be layered onto the same token flow in later milestones.
+- Treat `ADMIN-DEMO` as a local-development admin identifier through configuration only; production must set `YUELU_ADMIN_STUDENT_NUMBERS`.
+
+Assumptions:
+
+- The student number may contain letters, numbers, underscores, or hyphens and is normalized to uppercase before hashing.
+- A development fallback pepper and token secret are acceptable for local validation only; production deployments must provide environment values.
+
+Next step:
+
+- Start Milestone 3 by implementing traffic report creation/listing/detail, feedback, confidence scoring, expiration, reputation and points updates, and Android map/report UI.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -407,6 +490,10 @@ Next step:
 | 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 1 backend boot jar build passed. |
 | 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed after fix | Added `android.useAndroidX=true`, then Android debug unit tests passed. |
 | 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 1 Android debug APK build passed. |
+| 2026-05-09 | `.\gradlew.bat :backend:test` | Passed | Milestone 2 auth, privacy, token, and leaderboard redaction tests passed. |
+| 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed | Milestone 2 privacy notice and public code unit tests passed. |
+| 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 2 backend jar build passed. |
+| 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 2 Android debug APK build passed. |
 
 ## Known Issues
 

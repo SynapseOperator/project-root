@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:yuelu_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+app:
+  security:
+    student-pepper: test-pepper
+    token-secret: test-token-secret
+    admin-student-numbers: ADMIN-DEMO

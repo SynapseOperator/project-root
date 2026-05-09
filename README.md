@@ -56,6 +56,34 @@ The Android debug APK is generated at:
 android/build/outputs/apk/debug/android-debug.apk
 ```
 
+## Current API Examples
+
+Create or reuse a lightweight student-number-based app user. The student number is hashed by the backend and is not returned by public APIs.
+
+```powershell
+$login = Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8080/api/v1/auth/student `
+  -ContentType "application/json" `
+  -Body '{"studentNumber":"20260001","privacyAcknowledged":true}'
+
+$token = $login.accessToken
+```
+
+Read the current private session summary:
+
+```powershell
+Invoke-RestMethod `
+  -Uri http://localhost:8080/api/v1/me `
+  -Headers @{ Authorization = "Bearer $token" }
+```
+
+Read the public leaderboard, which uses non-sensitive public user codes:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/v1/leaderboard
+```
+
 ## Control Files
 
 ### `AGENTS.md`
