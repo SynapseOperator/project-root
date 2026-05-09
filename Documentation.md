@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Chinese UI redesign phase Milestone 5 complete; ready for Milestone 6 full quality gate
+Chinese UI redesign phase Milestone 6 complete; ready for Milestone 7 final documentation and handoff
 
 Last updated:
 
@@ -57,8 +57,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 3 - Core P0 Feature 2 | Completed | Android traffic report list, detail refresh, creation, and feedback now use backend APIs when logged in online, with clearly labeled local demo fallback. |
 | Milestone 4 - Core P0 Feature 3 | Completed | Accident board, profile, leaderboard, and demo admin pages now have clearer Chinese copy, local/demo boundaries, privacy notes, and role-aware admin visibility. |
 | Milestone 5 - Integration and Error Handling | Completed | Added Android Chinese text validation, strengthened safety phrase scanning for Chinese unlawful-evasion wording, and verified the scripts with Android/backend builds and tests. |
-| Milestone 6 - Tests and Quality Check | Next | Add or update tests and run full practical validation. |
-| Milestone 7 - Final Documentation and Delivery | Not started | Final README/Documentation updates, acceptance notes, and final validation. |
+| Milestone 6 - Tests and Quality Check | Completed | Full Gradle `check`, Android debug APK build, backend boot jar build, Chinese text scan, safety scan, TODO scan, and device availability check were run. |
+| Milestone 7 - Final Documentation and Delivery | Next | Final README/Documentation updates, acceptance notes, and final validation. |
 
 ### Previous MVP Phase
 
@@ -1245,6 +1245,64 @@ Next step:
 
 ---
 
+### 2026-05-09 - Chinese UI Redesign Phase Milestone 6
+
+Date: 2026-05-09
+
+Milestone: Milestone 6 - Tests and Quality Check
+
+Files changed:
+
+- `Documentation.md`
+
+Work completed:
+
+- Ran the full practical quality gate for the current Chinese UI redesign phase.
+- Verified Android unit tests, backend tests, Android lint through Gradle `check`, Android debug APK build, backend boot jar build, Chinese text scan, safety scan, and TODO scan.
+- Checked Android device availability for manual/emulator validation.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:bootJar`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `adb devices`
+
+Results:
+
+- Full Gradle `check` passed.
+- Android Chinese text scan passed.
+- Safety text scan passed.
+- TODO/FIXME scan passed.
+- Backend boot jar build passed.
+- Android debug APK build passed.
+- `adb devices` listed no connected devices.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Continue to treat manual phone/emulator UI validation as unavailable in this environment until a device appears in `adb devices`.
+
+Assumptions:
+
+- JVM/unit/lint/build validation is the strongest available local verification without an emulator or physical Android device.
+
+Next step:
+
+- Start Milestone 7 by updating README and final handoff notes for the Chinese UI redesign phase, then rerun final validation.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -1277,6 +1335,13 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check` | Passed | Chinese UI redesign Milestone 6 full Gradle check passed, including Android lint, Android unit tests, and backend tests. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Android Chinese text scan passed in the full quality gate. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed in the full quality gate. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1` | Passed | TODO/FIXME scan passed in the full quality gate. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:bootJar` | Passed | Backend boot jar build passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Android debug APK build passed. |
+| 2026-05-09 | `adb devices` | No devices attached | Manual phone/emulator UI validation could not be run in this environment. |
 | 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Failed then passed | First run exposed PowerShell UTF-8 literal parsing issues; script was rewritten with ASCII source and Unicode code points, then passed. |
 | 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Failed then passed | First run exposed the same PowerShell encoding issue after adding Chinese patterns; script was rewritten and rerun successfully. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 5 Android unit tests passed after validation script additions. |
