@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,10 +66,13 @@ import com.yuelutraffic.app.accidents.requestContact
 import com.yuelutraffic.app.accidents.sampleAccidentPosts
 import com.yuelutraffic.app.auth.PRIVACY_NOTICE
 import com.yuelutraffic.app.auth.publicCodeForStudentNumber
+import com.yuelutraffic.app.config.isSupportedBackendBaseUrl
+import com.yuelutraffic.app.config.normalizeBackendBaseUrl
 import com.yuelutraffic.app.network.ApiResult
 import com.yuelutraffic.app.network.BackendAuthSession
 import com.yuelutraffic.app.network.BackendUserProfile
 import com.yuelutraffic.app.network.YueluApiClient
+import com.yuelutraffic.app.storage.SessionStore
 import com.yuelutraffic.app.traffic.FeedbackChoice
 import com.yuelutraffic.app.traffic.TrafficReportStatus
 import com.yuelutraffic.app.traffic.TrafficReportType
@@ -79,20 +83,65 @@ import com.yuelutraffic.app.traffic.sampleTrafficReports
 
 @Composable
 fun YueluTrafficApp() {
-    val apiClient = remember { YueluApiClient() }
-    var session by remember { mutableStateOf<StudentSessionUi?>(null) }
+    val context = LocalContext.current
+    val sessionStore = remember(context) { SessionStore(context) }
+    var apiBaseUrl by rememberSaveable { mutableStateOf(sessionStore.loadBackendBaseUrl()) }
+    val normalizedBaseUrl = normalizeBackendBaseUrl(apiBaseUrl)
+    val apiClient = remember(normalizedBaseUrl) { YueluApiClient(baseUrl = normalizedBaseUrl) }
+
+    var session by remember { mutableStateOf(sessionStore.loadSession()) }
+    var isCheckingSession by rememberSaveable { mutableStateOf(session?.accessToken != null) }
     var isLoggingIn by rememberSaveable { mutableStateOf(false) }
     var loginError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun saveBaseUrl(value: String) {
+        apiBaseUrl = value
+        sessionStore.saveBackendBaseUrl(value)
+    }
+
+    fun clearSession(message: String? = null) {
+        sessionStore.clearSession()
+        session = null
+        loginError = message
+    }
+
+    LaunchedEffect(Unit) {
+        val storedSession = session
+        val token = storedSession?.accessToken
+        if (token == null) {
+            isCheckingSession = false
+        } else {
+            apiClient.fetchMe(token) { result ->
+                isCheckingSession = false
+                when (result) {
+                    is ApiResult.Success -> {
+                        val restored = result.value.toUiSession(
+                            accessToken = token,
+                            connectionMessage = "已恢复本机登录，并通过后端校验当前用户。",
+                        )
+                        sessionStore.saveSession(restored)
+                        session = restored
+                    }
+                    is ApiResult.Failure -> {
+                        clearSession("登录状态已失效，请重新登录。${result.message}")
+                    }
+                }
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
         val signedInSession = session
-        if (signedInSession == null) {
-            LoginScreen(
+        when {
+            isCheckingSession -> RestoringSessionScreen(apiBaseUrl = normalizedBaseUrl)
+            signedInSession == null -> LoginScreen(
+                apiBaseUrl = apiBaseUrl,
                 isLoading = isLoggingIn,
                 errorMessage = loginError,
+                onApiBaseUrlChange = ::saveBaseUrl,
                 onLogin = { studentNumber ->
                     isLoggingIn = true
                     loginError = null
@@ -101,16 +150,26 @@ fun YueluTrafficApp() {
                         when (result) {
                             is ApiResult.Success -> {
                                 val backendSession = result.value
-                                session = backendSession.toUiSession("已连接后端登录服务，正在刷新当前用户。")
+                                val loginSession = backendSession.toUiSession("已连接后端登录服务，正在刷新当前用户。")
+                                sessionStore.saveSession(loginSession)
+                                session = loginSession
                                 apiClient.fetchMe(backendSession.accessToken) { meResult ->
                                     session = when (meResult) {
-                                        is ApiResult.Success -> meResult.value.toUiSession(
-                                            accessToken = backendSession.accessToken,
-                                            connectionMessage = "已通过后端 /api/v1/me 获取当前用户会话。",
-                                        )
-                                        is ApiResult.Failure -> backendSession.toUiSession(
-                                            "登录成功，但刷新当前用户失败：${meResult.message}",
-                                        )
+                                        is ApiResult.Success -> {
+                                            val refreshed = meResult.value.toUiSession(
+                                                accessToken = backendSession.accessToken,
+                                                connectionMessage = "已通过后端 /api/v1/me 获取当前用户会话。",
+                                            )
+                                            sessionStore.saveSession(refreshed)
+                                            refreshed
+                                        }
+                                        is ApiResult.Failure -> {
+                                            val fallback = backendSession.toUiSession(
+                                                "登录成功，但刷新当前用户失败：${meResult.message}",
+                                            )
+                                            sessionStore.saveSession(fallback)
+                                            fallback
+                                        }
                                     }
                                 }
                             }
@@ -122,6 +181,7 @@ fun YueluTrafficApp() {
                 },
                 onUseDemo = { studentNumber ->
                     val displayCode = publicCodeForStudentNumber(studentNumber.ifBlank { "DEMO-STUDENT" })
+                    sessionStore.clearSession()
                     loginError = null
                     session = StudentSessionUi(
                         publicCode = displayCode,
@@ -129,22 +189,49 @@ fun YueluTrafficApp() {
                     )
                 },
             )
-        } else {
-            MainShell(session = signedInSession, apiClient = apiClient)
+            else -> MainShell(
+                session = signedInSession,
+                apiClient = apiClient,
+                apiBaseUrl = apiBaseUrl,
+                onApiBaseUrlChange = ::saveBaseUrl,
+                onLogout = { clearSession("已退出登录。") },
+            )
         }
     }
 }
 
 @Composable
+private fun RestoringSessionScreen(apiBaseUrl: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(YueluColors.Page)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(AppCopy.appName, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(12.dp))
+        StatusNotice(
+            title = "正在恢复登录",
+            body = "正在使用 $apiBaseUrl 校验本机保存的后端会话。",
+        )
+    }
+}
+
+@Composable
 private fun LoginScreen(
+    apiBaseUrl: String,
     isLoading: Boolean,
     errorMessage: String?,
+    onApiBaseUrlChange: (String) -> Unit,
     onLogin: (String) -> Unit,
     onUseDemo: (String) -> Unit,
 ) {
     var studentNumber by rememberSaveable { mutableStateOf("") }
     var acknowledged by rememberSaveable { mutableStateOf(false) }
-    val canContinue = studentNumber.trim().length >= 4 && acknowledged
+    val baseUrlValid = isSupportedBackendBaseUrl(normalizeBackendBaseUrl(apiBaseUrl))
+    val canContinue = studentNumber.trim().length >= 4 && acknowledged && baseUrlValid
 
     Column(
         modifier = Modifier
@@ -154,35 +241,38 @@ private fun LoginScreen(
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = AppCopy.appName,
-            style = MaterialTheme.typography.headlineLarge,
-            color = YueluColors.Ink,
-            fontWeight = FontWeight.Bold,
+        Text(AppCopy.appName, style = MaterialTheme.typography.headlineLarge, color = YueluColors.Ink, fontWeight = FontWeight.Bold)
+        Text(AppCopy.appSubtitle, style = MaterialTheme.typography.titleMedium, color = YueluColors.CampusGreen)
+        Spacer(modifier = Modifier.height(24.dp))
+        OutlinedTextField(
+            value = apiBaseUrl,
+            onValueChange = onApiBaseUrlChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("后端地址") },
+            supportingText = { Text("模拟器默认使用 http://10.0.2.2:8080；真机可填写电脑局域网地址。") },
+            singleLine = true,
         )
-        Text(
-            text = AppCopy.appSubtitle,
-            style = MaterialTheme.typography.titleMedium,
-            color = YueluColors.CampusGreen,
-        )
-        Spacer(modifier = Modifier.height(28.dp))
+        if (!baseUrlValid) {
+            StatusNotice(
+                title = "后端地址格式不正确",
+                body = "请使用 http:// 或 https:// 开头的地址。",
+                isWarning = true,
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
         OutlinedTextField(
             value = studentNumber,
             onValueChange = { studentNumber = it },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("学号") },
-            supportingText = { Text("仅用于生成应用内展示代码") },
+            supportingText = { Text("仅用于登录和生成应用内公开代码。") },
             singleLine = true,
         )
-        Spacer(modifier = Modifier.height(14.dp))
         Row(
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Checkbox(
-                checked = acknowledged,
-                onCheckedChange = { acknowledged = it },
-            )
+            Checkbox(checked = acknowledged, onCheckedChange = { acknowledged = it })
             Text(
                 text = PRIVACY_NOTICE,
                 style = MaterialTheme.typography.bodyMedium,
@@ -190,7 +280,6 @@ private fun LoginScreen(
                 modifier = Modifier.weight(1f),
             )
         }
-        Spacer(modifier = Modifier.height(20.dp))
         Button(
             enabled = canContinue && !isLoading,
             onClick = { onLogin(studentNumber) },
@@ -207,23 +296,21 @@ private fun LoginScreen(
         }
         if (errorMessage != null) {
             Spacer(modifier = Modifier.height(12.dp))
-            StatusNotice(
-                title = "后端连接失败",
-                body = errorMessage,
-                isWarning = true,
-            )
+            StatusNotice(title = "后端连接失败", body = errorMessage, isWarning = true)
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = AppCopy.lawfulUse,
-            style = MaterialTheme.typography.bodySmall,
-            color = YueluColors.InkMuted,
-        )
+        Text(AppCopy.lawfulUse, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
     }
 }
 
 @Composable
-private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
+private fun MainShell(
+    session: StudentSessionUi,
+    apiClient: YueluApiClient,
+    apiBaseUrl: String,
+    onApiBaseUrlChange: (String) -> Unit,
+    onLogout: () -> Unit,
+) {
     val reports = remember { mutableStateListOf<TrafficReportUi>().also { it.addAll(sampleTrafficReports()) } }
     val accidents = remember { mutableStateListOf<AccidentPostUi>().also { it.addAll(sampleAccidentPosts()) } }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Map) }
@@ -232,25 +319,13 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
     var isReportLoading by rememberSaveable { mutableStateOf(false) }
     var isReportSubmitting by rememberSaveable { mutableStateOf(false) }
     var reportStatusMessage by rememberSaveable {
-        mutableStateOf(
-            if (session.isDemoMode) {
-                "当前显示本地演示路况，未连接后端列表。"
-            } else {
-                "正在从后端加载麓山南路附近路况。"
-            },
-        )
+        mutableStateOf(if (session.isDemoMode) "当前显示本地演示路况，未连接后端列表。" else "正在从后端加载麓山南路附近路况。")
     }
 
     fun replaceReport(updated: TrafficReportUi) {
         val index = reports.indexOfFirst { it.id == updated.id }
-        if (index >= 0) {
-            reports[index] = updated
-        } else {
-            reports.add(0, updated)
-        }
-        if (selectedReport?.id == updated.id) {
-            selectedReport = updated
-        }
+        if (index >= 0) reports[index] = updated else reports.add(0, updated)
+        if (selectedReport?.id == updated.id) selectedReport = updated
     }
 
     fun loadBackendReports() {
@@ -269,9 +344,7 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
                     reportStatusMessage = "已从后端加载 ${result.value.size} 条附近路况。"
                 }
                 is ApiResult.Failure -> {
-                    if (reports.isEmpty()) {
-                        reports.addAll(sampleTrafficReports())
-                    }
+                    if (reports.isEmpty()) reports.addAll(sampleTrafficReports())
                     reportStatusMessage = "后端路况加载失败：${result.message} 当前显示本地演示路况。"
                 }
             }
@@ -284,9 +357,7 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
             apiClient.fetchReportDetail(report.id) { result ->
                 when (result) {
                     is ApiResult.Success -> replaceReport(result.value)
-                    is ApiResult.Failure -> {
-                        reportStatusMessage = "详情刷新失败：${result.message}"
-                    }
+                    is ApiResult.Failure -> reportStatusMessage = "详情刷新失败：${result.message}"
                 }
             }
         }
@@ -312,9 +383,7 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
                     selectedTab = MainTab.Map
                     reportStatusMessage = "路况已提交到后端。"
                 }
-                is ApiResult.Failure -> {
-                    reportStatusMessage = "路况提交失败：${result.message}"
-                }
+                is ApiResult.Failure -> reportStatusMessage = "路况提交失败：${result.message}"
             }
         }
     }
@@ -335,17 +404,13 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
                     replaceReport(result.value)
                     reportStatusMessage = "反馈已同步到后端。"
                 }
-                is ApiResult.Failure -> {
-                    reportStatusMessage = "反馈提交失败：${result.message}"
-                }
+                is ApiResult.Failure -> reportStatusMessage = "反馈提交失败：${result.message}"
             }
         }
     }
 
     LaunchedEffect(session.accessToken, session.isDemoMode) {
-        if (!session.isDemoMode) {
-            loadBackendReports()
-        }
+        if (!session.isDemoMode) loadBackendReports()
     }
 
     Scaffold(
@@ -356,12 +421,7 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
                     NavigationBarItem(
                         selected = selectedTab == tab,
                         onClick = { selectedTab = tab },
-                        icon = {
-                            Text(
-                                text = tab.iconText,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        },
+                        icon = { Text(tab.iconText, fontWeight = FontWeight.Bold) },
                         label = { Text(tab.label) },
                     )
                 }
@@ -374,9 +434,9 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
                 reports = reports,
                 reportStatusMessage = reportStatusMessage,
                 isReportLoading = isReportLoading,
-                onRefreshReports = { loadBackendReports() },
-                onSelectReport = { selectReport(it) },
-                onFeedback = { reportId, choice -> applyReportFeedback(reportId, choice) },
+                onRefreshReports = ::loadBackendReports,
+                onSelectReport = ::selectReport,
+                onFeedback = ::applyReportFeedback,
                 contentPadding = innerPadding,
             )
             MainTab.Report -> SubmitReportScreen(
@@ -384,9 +444,7 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
                 isSubmitting = isReportSubmitting,
                 statusMessage = reportStatusMessage,
                 isBackendMode = !session.isDemoMode,
-                onSubmit = { type, locationLabel, description ->
-                    submitReport(type, locationLabel, description)
-                },
+                onSubmit = ::submitReport,
                 contentPadding = innerPadding,
             )
             MainTab.Accidents -> AccidentBoardScreen(
@@ -400,6 +458,8 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
             )
             MainTab.Profile -> ProfileScreen(
                 session = session,
+                apiBaseUrl = apiBaseUrl,
+                onApiBaseUrlChange = onApiBaseUrlChange,
                 activeReports = reports.count { it.status == TrafficReportStatus.ACTIVE },
                 accidents = accidents,
                 postingRestricted = postingRestricted,
@@ -414,6 +474,7 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
                     if (index >= 0) accidents[index] = accidents[index].copy(status = AccidentPostStatus.HIDDEN)
                 },
                 onToggleRestriction = { postingRestricted = !postingRestricted },
+                onLogout = onLogout,
                 contentPadding = innerPadding,
             )
         }
@@ -423,9 +484,7 @@ private fun MainShell(session: StudentSessionUi, apiClient: YueluApiClient) {
         ReportDetailDialog(
             report = report,
             onDismiss = { selectedReport = null },
-            onFeedback = { choice ->
-                applyReportFeedback(report.id, choice)
-            },
+            onFeedback = { choice -> applyReportFeedback(report.id, choice) },
         )
     }
 }
@@ -450,11 +509,7 @@ private fun MapHomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            AppHeader(
-                title = "麓山南路实时路况",
-                subtitle = "你好，${session.publicCode}",
-                badge = "地图优先",
-            )
+            AppHeader(title = "麓山南路实时路况", subtitle = "你好，${session.publicCode}", badge = "地图优先")
         }
         item {
             StatusNotice(
@@ -463,11 +518,7 @@ private fun MapHomeScreen(
             )
         }
         item {
-            OutlinedButton(
-                enabled = !isReportLoading,
-                onClick = onRefreshReports,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
+            OutlinedButton(enabled = !isReportLoading, onClick = onRefreshReports, modifier = Modifier.fillMaxWidth()) {
                 Text(if (isReportLoading) "正在刷新路况" else "刷新路况")
             }
         }
@@ -475,11 +526,7 @@ private fun MapHomeScreen(
             MockMapPanel(reports = reports, onSelectReport = onSelectReport)
         }
         item {
-            ReportFeed(
-                reports = reports,
-                onSelectReport = onSelectReport,
-                onFeedback = onFeedback,
-            )
+            ReportFeed(reports = reports, onSelectReport = onSelectReport, onFeedback = onFeedback)
         }
     }
 }
@@ -505,41 +552,17 @@ private fun SubmitReportScreen(
         contentPadding = PaddingValues(top = 18.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item {
-            AppHeader(
-                title = "上报路况",
-                subtitle = "补充你看到的道路安全与通行信息",
-                badge = "30 秒完成",
-            )
-        }
+        item { AppHeader(title = "上报路况", subtitle = "补充你看到的道路安全与通行信息", badge = "30 秒完成") }
         if (postingRestricted) {
-            item {
-                StatusNotice(
-                    title = "暂不可上报",
-                    body = "当前账号处于演示限制状态，请稍后再试。",
-                    isWarning = true,
-                )
-            }
+            item { StatusNotice(title = "暂不可上报", body = "当前账号处于限制状态，请稍后再试。", isWarning = true) }
         }
-        item {
-            StatusNotice(
-                title = if (isBackendMode) "后端提交" else "演示提交",
-                body = statusMessage,
-            )
-        }
+        item { StatusNotice(title = if (isBackendMode) "后端提交" else "演示提交", body = statusMessage) }
         item {
             ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface)) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("选择类型", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     TrafficReportType.entries.forEach { type ->
-                        FilterChip(
-                            selected = selectedType == type,
-                            onClick = { selectedType = type },
-                            label = { Text(type.label) },
-                        )
+                        FilterChip(selected = selectedType == type, onClick = { selectedType = type }, label = { Text(type.label) })
                     }
                     OutlinedTextField(
                         value = locationLabel,
@@ -565,11 +588,7 @@ private fun SubmitReportScreen(
                     ) {
                         Text(if (isSubmitting) "正在提交" else if (isBackendMode) "提交到后端" else "提交演示路况")
                     }
-                    Text(
-                        text = AppCopy.lawfulUse,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = YueluColors.InkMuted,
-                    )
+                    Text(AppCopy.lawfulUse, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
                 }
             }
         }
@@ -595,25 +614,11 @@ private fun AccidentBoardScreen(
         contentPadding = PaddingValues(top = 18.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item {
-            AppHeader(
-                title = "事故互助栏",
-                subtitle = "联系方式默认隐藏，双方确认后才显示",
-                badge = "隐私优先",
-            )
-        }
-        item {
-            StatusNotice(
-                title = "本地演示",
-                body = AppCopy.accidentDemoNotice,
-            )
-        }
+        item { AppHeader(title = "事故互助栏", subtitle = "联系方式默认隐藏，双方确认后才显示", badge = "隐私优先") }
+        item { StatusNotice(title = "互助提醒", body = AppCopy.accidentDemoNotice) }
         item {
             ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface)) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = locationLabel,
                         onValueChange = { locationLabel = it },
@@ -654,12 +659,15 @@ private fun AccidentBoardScreen(
 @Composable
 private fun ProfileScreen(
     session: StudentSessionUi,
+    apiBaseUrl: String,
+    onApiBaseUrlChange: (String) -> Unit,
     activeReports: Int,
     accidents: List<AccidentPostUi>,
     postingRestricted: Boolean,
     onHideReport: () -> Unit,
     onHideAccident: () -> Unit,
     onToggleRestriction: () -> Unit,
+    onLogout: () -> Unit,
     contentPadding: PaddingValues,
 ) {
     var panel by rememberSaveable { mutableStateOf(ProfilePanel.Overview) }
@@ -687,22 +695,22 @@ private fun ProfileScreen(
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 panels.forEach { item ->
-                    FilterChip(
-                        selected = panel == item,
-                        onClick = { panel = item },
-                        label = { Text(item.label) },
-                    )
+                    FilterChip(selected = panel == item, onClick = { panel = item }, label = { Text(item.label) })
                 }
             }
         }
         when (panel) {
             ProfilePanel.Overview -> item {
-                ProfileOverview(session = session, activeReports = activeReports)
+                ProfileOverview(
+                    session = session,
+                    activeReports = activeReports,
+                    apiBaseUrl = apiBaseUrl,
+                    onApiBaseUrlChange = onApiBaseUrlChange,
+                    onLogout = onLogout,
+                )
             }
             ProfilePanel.Leaderboard -> item {
-                LeaderboardPanel(
-                    entries = leaderboardEntries(session, activeReports),
-                )
+                LeaderboardPanel(entries = leaderboardEntries(session, activeReports))
             }
             ProfilePanel.Admin -> item {
                 AdminPanel(
@@ -712,6 +720,9 @@ private fun ProfileScreen(
                     onHideAccident = onHideAccident,
                     onToggleRestriction = onToggleRestriction,
                 )
+            }
+            ProfilePanel.Privacy -> item {
+                PrivacySafetyPanel()
             }
         }
     }
@@ -725,12 +736,7 @@ private fun AppHeader(title: String, subtitle: String, badge: String) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = YueluColors.Ink,
-            )
+            Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = YueluColors.Ink)
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
@@ -739,10 +745,7 @@ private fun AppHeader(title: String, subtitle: String, badge: String) {
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        AssistChip(
-            onClick = {},
-            label = { Text(badge) },
-        )
+        AssistChip(onClick = {}, label = { Text(badge) })
     }
 }
 
@@ -750,10 +753,7 @@ private fun AppHeader(title: String, subtitle: String, badge: String) {
 private fun StatusNotice(title: String, body: String, isWarning: Boolean = false) {
     val container = if (isWarning) Color(0xFFFFEFE8) else YueluColors.CampusGreenSoft
     val content = if (isWarning) YueluColors.AlertRed else YueluColors.CampusGreen
-    Card(
-        colors = CardDefaults.cardColors(containerColor = container),
-        shape = RoundedCornerShape(8.dp),
-    ) {
+    Card(colors = CardDefaults.cardColors(containerColor = container), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = content, fontWeight = FontWeight.Bold)
             Text(body, style = MaterialTheme.typography.bodySmall, color = YueluColors.Ink)
@@ -769,11 +769,7 @@ private fun MockMapPanel(reports: List<TrafficReportUi>, onSelectReport: (Traffi
         shape = RoundedCornerShape(8.dp),
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                text = "中南大学 - 麓山南路",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Text("中南大学 - 麓山南路", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -783,11 +779,7 @@ private fun MockMapPanel(reports: List<TrafficReportUi>, onSelectReport: (Traffi
             ) {
                 MockMapCanvas(modifier = Modifier.fillMaxSize())
                 reports.filter { it.status == TrafficReportStatus.ACTIVE }.take(4).forEachIndexed { index, report ->
-                    MapMarker(
-                        report = report,
-                        index = index,
-                        onClick = { onSelectReport(report) },
-                    )
+                    MapMarker(report = report, index = index, onClick = { onSelectReport(report) })
                 }
                 Surface(
                     modifier = Modifier
@@ -829,7 +821,7 @@ private fun MockMapCanvas(modifier: Modifier = Modifier) {
             cap = StrokeCap.Round,
         )
         drawLine(
-            color = Color(0xFFFFFFFF),
+            color = Color.White,
             start = Offset(size.width * 0.36f, size.height * 0.05f),
             end = Offset(size.width * 0.56f, size.height * 0.95f),
             strokeWidth = 24f,
@@ -853,12 +845,7 @@ private fun MockMapCanvas(modifier: Modifier = Modifier) {
 
 @Composable
 private fun MapMarker(report: TrafficReportUi, index: Int, onClick: () -> Unit) {
-    val positions = listOf(
-        44.dp to 168.dp,
-        138.dp to 118.dp,
-        232.dp to 92.dp,
-        276.dp to 194.dp,
-    )
+    val positions = listOf(44.dp to 168.dp, 138.dp to 118.dp, 232.dp to 92.dp, 276.dp to 194.dp)
     val position = positions[index % positions.size]
     Box(
         modifier = Modifier
@@ -869,12 +856,7 @@ private fun MapMarker(report: TrafficReportUi, index: Int, onClick: () -> Unit) 
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = report.type.label.take(1),
-            color = Color.White,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
+        Text(report.type.label.take(1), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -885,11 +867,7 @@ private fun ReportFeed(
     onFeedback: (String, FeedbackChoice) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("附近路况", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("${reports.count { it.status == TrafficReportStatus.ACTIVE }} 条生效", style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
         }
@@ -900,11 +878,7 @@ private fun ReportFeed(
 }
 
 @Composable
-private fun ReportCard(
-    report: TrafficReportUi,
-    onSelect: () -> Unit,
-    onFeedback: (String, FeedbackChoice) -> Unit,
-) {
+private fun ReportCard(report: TrafficReportUi, onSelect: () -> Unit, onFeedback: (String, FeedbackChoice) -> Unit) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -941,11 +915,7 @@ private fun ReportCard(
 }
 
 @Composable
-private fun ReportDetailDialog(
-    report: TrafficReportUi,
-    onDismiss: () -> Unit,
-    onFeedback: (FeedbackChoice) -> Unit,
-) {
+private fun ReportDetailDialog(report: TrafficReportUi, onDismiss: () -> Unit, onFeedback: (FeedbackChoice) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(report.type.label) },
@@ -977,10 +947,7 @@ private fun AccidentCard(
     onContactChange: (String) -> Unit,
     onUpdate: (AccidentPostUi) -> Unit,
 ) {
-    ElevatedCard(
-        colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface),
-        shape = RoundedCornerShape(8.dp),
-    ) {
+    ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(accident.locationLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(accident.description, style = MaterialTheme.typography.bodyMedium)
@@ -1018,11 +985,14 @@ private fun AccidentCard(
 }
 
 @Composable
-private fun ProfileOverview(session: StudentSessionUi, activeReports: Int) {
-    ElevatedCard(
-        colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface),
-        shape = RoundedCornerShape(8.dp),
-    ) {
+private fun ProfileOverview(
+    session: StudentSessionUi,
+    activeReports: Int,
+    apiBaseUrl: String,
+    onApiBaseUrlChange: (String) -> Unit,
+    onLogout: () -> Unit,
+) {
+    ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("账号概览", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("展示代码：${session.publicCode}")
@@ -1030,36 +1000,32 @@ private fun ProfileOverview(session: StudentSessionUi, activeReports: Int) {
             Text("称号：${titleLabel(session.titleCode)}")
             Text("信誉：${session.reputationScore} · 积分：${session.points}")
             Text("当前生效上报：$activeReports 条")
+            Text("限制状态：${session.postingBanUntil ?: "未限制"}")
             Text("模式：${if (session.isDemoMode) "本地演示" else "后端在线"}")
-            Text(
-                text = if (session.isDemoMode) {
-                    "当前页面全部使用本地演示数据。"
-                } else {
-                    "登录和路况已连接后端；事故栏、排行榜、管理员仍按本阶段演示边界处理。"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = YueluColors.InkMuted,
+            OutlinedTextField(
+                value = apiBaseUrl,
+                onValueChange = onApiBaseUrlChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("后端地址") },
+                supportingText = { Text("修改后会影响下一次请求；真机可填写电脑局域网地址。") },
+                singleLine = true,
             )
             Text("学号不会公开展示，排行榜仅展示应用内代码。", style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
+            OutlinedButton(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
+                Text("退出登录")
+            }
         }
     }
 }
 
 @Composable
 private fun LeaderboardPanel(entries: List<LeaderboardEntryUi>) {
-    ElevatedCard(
-        colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface),
-        shape = RoundedCornerShape(8.dp),
-    ) {
+    ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("校园互助排行榜", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(AppCopy.leaderboardDemoNotice, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
             entries.forEach { entry ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("${entry.rank}. ${entry.publicCode}", fontWeight = if (entry.rank == 1) FontWeight.Bold else FontWeight.Normal)
                     Text("${entry.points} 分 · ${entry.title}", color = YueluColors.InkMuted)
                 }
@@ -1076,12 +1042,9 @@ private fun AdminPanel(
     onHideAccident: () -> Unit,
     onToggleRestriction: () -> Unit,
 ) {
-    ElevatedCard(
-        colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface),
-        shape = RoundedCornerShape(8.dp),
-    ) {
+    ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("演示管理员面板", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("管理员面板", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(AppCopy.adminDemoNotice, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
             Text("开放互助信息：${accidents.count { it.status == AccidentPostStatus.OPEN }} 条")
             Text("上报限制：${if (postingRestricted) "已开启" else "未开启"}")
@@ -1094,6 +1057,17 @@ private fun AdminPanel(
             OutlinedButton(onClick = onToggleRestriction, modifier = Modifier.fillMaxWidth()) {
                 Text(if (postingRestricted) "解除上报限制" else "开启上报限制")
             }
+        }
+    }
+}
+
+@Composable
+private fun PrivacySafetyPanel() {
+    ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface), shape = RoundedCornerShape(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(AppCopy.privacySafetyTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(AppCopy.privacySafetyBody, style = MaterialTheme.typography.bodyMedium, color = YueluColors.Ink)
+            Text("地图 SDK 密钥、后端密钥和签名凭据不应提交到 Git。", style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
         }
     }
 }
@@ -1116,6 +1090,7 @@ private fun BackendUserProfile.toUiSession(accessToken: String, connectionMessag
         reputationScore = reputationScore,
         points = points,
         titleCode = titleCode,
+        postingBanUntil = postingBanUntil,
         connectionMessage = connectionMessage,
         isDemoMode = false,
     )

@@ -3,6 +3,7 @@ package com.yuelutraffic.app.network
 import android.os.Handler
 import android.os.Looper
 import com.yuelutraffic.app.BuildConfig
+import com.yuelutraffic.app.config.normalizeBackendBaseUrl
 import com.yuelutraffic.app.traffic.FeedbackChoice
 import com.yuelutraffic.app.traffic.TrafficReportStatus
 import com.yuelutraffic.app.traffic.TrafficReportType
@@ -181,7 +182,7 @@ class YueluApiClient(
         return stream.bufferedReader(Charsets.UTF_8).use { it.readText() }
     }
 
-    private fun normalizedBaseUrl(): String = baseUrl.trimEnd('/')
+    private fun normalizedBaseUrl(): String = normalizeBackendBaseUrl(baseUrl)
 }
 
 internal fun studentLoginRequestBody(studentNumber: String, privacyAcknowledged: Boolean): String {
@@ -294,7 +295,7 @@ private class ApiHttpException(
 ) : IOException("HTTP $statusCode $responseBody") {
     fun userMessage(): String {
         return when (statusCode) {
-            400 -> "登录信息未通过校验，请检查后重试。"
+            400 -> "请求信息未通过校验，请检查后重试。"
             401 -> "登录状态无效，请重新登录。"
             403 -> "当前账号无权访问该功能。"
             in 500..599 -> "后端服务暂时不可用，请稍后再试。"

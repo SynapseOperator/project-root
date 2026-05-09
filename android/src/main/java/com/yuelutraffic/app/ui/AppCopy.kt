@@ -9,12 +9,14 @@ object AppCopy {
     const val appName = "Yuelu Traffic"
     const val appSubtitle = "中南大学周边路况互助"
     const val demoModeNotice = "当前为本地演示数据，尚未连接实时后端。"
-    const val mapSdkDeferred = "地图为组件化模拟视图，后续可替换为正式地图 SDK。"
+    const val mapSdkDeferred = "地图为组件化模拟视图；配置地图 SDK 后会优先使用真实地图。"
     const val lawfulUse = "仅用于共享道路安全与拥堵信息，请遵守交通规则。"
-    const val backendDeferred = "核心后端连接将在后续里程碑接入。"
-    const val accidentDemoNotice = "事故互助栏本阶段为本地演示，不会写入后端。联系方式默认不公开。"
-    const val leaderboardDemoNotice = "排行榜展示应用内代码，不展示学号；本阶段为本地演示排序。"
-    const val adminDemoNotice = "管理员面板仅演示审核交互，不会修改后端数据。"
+    const val accidentDemoNotice = "事故互助栏已支持后端接入；联系方式仍需双方确认后才显示。"
+    const val leaderboardDemoNotice = "排行榜展示应用内代码，不展示学号。"
+    const val adminDemoNotice = "管理员操作会影响后端数据，请谨慎确认。"
+    const val privacySafetyTitle = "隐私与安全"
+    const val privacySafetyBody =
+        "学号只用于登录和生成应用内公开代码；路况信息用于校园周边道路安全互助；事故联系方式默认隐藏，双方确认后才显示。请不要使用本应用传播违法规避、绕行执法或泄露他人隐私的信息。"
 }
 
 enum class MainTab(
@@ -31,6 +33,7 @@ enum class ProfilePanel(val label: String) {
     Overview("资料"),
     Leaderboard("排行榜"),
     Admin("管理员"),
+    Privacy("隐私"),
 }
 
 data class StudentSessionUi(
@@ -40,6 +43,7 @@ data class StudentSessionUi(
     val reputationScore: Int = 60,
     val points: Int = 24,
     val titleCode: String = "LOCAL_HELPER",
+    val postingBanUntil: String? = null,
     val connectionMessage: String = AppCopy.demoModeNotice,
     val isDemoMode: Boolean = true,
 ) {

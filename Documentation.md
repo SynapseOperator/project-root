@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Full integration phase Milestone 0 complete; ready for Milestone 1 configuration, persistent session, logout, and release foundation
+Full integration phase Milestone 1 complete; ready for Milestone 2 accident board backend integration
 
 Last updated:
 
@@ -52,8 +52,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone | Status | Notes |
 |---|---|---|
 | Milestone 0 - Project Understanding and Setup | Completed | Active `Prompt.md` defines full Android backend integration, persistent session/logout, configurable backend URLs, production map SDK with mock fallback, and release-preparation scope. Previous active prompt is archived under `docs/prompts/2026-05-09-yuelu-traffic-chinese-ui-redesign.md`. |
-| Milestone 1 - Minimal Running Skeleton | Next | Add configuration/session foundation: persisted token/user/base URL, logout, backend status/debug surface, privacy/safety page, and release asset baseline. |
-| Milestone 2 - Core P0 Feature 1 | Not started | Connect accident board list/create/contact request/contact confirmation to backend. |
+| Milestone 1 - Minimal Running Skeleton | Completed | Added configurable backend base URL, persisted token/user/base URL storage, session restoration, logout, backend status/debug surface, privacy/safety page, and launcher icon baseline. |
+| Milestone 2 - Core P0 Feature 1 | Next | Connect accident board list/create/contact request/contact confirmation to backend. |
 | Milestone 3 - Core P0 Feature 2 | Not started | Connect leaderboard/profile to backend user and ranking data, including restriction state. |
 | Milestone 4 - Core P0 Feature 3 | Not started | Connect Android admin review, report moderation, accident moderation, and user restriction actions to backend. |
 | Milestone 5 - Integration and Error Handling | Not started | Add production map SDK provider abstraction, secure local key config, mock fallback, marker rendering, UI polish, icon/splash/privacy setup, and connection guides. |
@@ -145,6 +145,80 @@ Assumptions:
 Next step:
 
 - Start Milestone 1 by adding persisted session and configurable backend URL support, logout, privacy/safety surface, and initial release assets.
+
+---
+
+### 2026-05-09 - Full Integration Phase Milestone 1
+
+Date: 2026-05-09
+
+Milestone: Milestone 1 - Minimal Running Skeleton
+
+Files changed:
+
+- `android/build.gradle`
+- `android/src/main/AndroidManifest.xml`
+- `android/src/main/java/com/yuelutraffic/app/config/AppConfig.kt`
+- `android/src/main/java/com/yuelutraffic/app/storage/SessionStore.kt`
+- `android/src/main/java/com/yuelutraffic/app/network/YueluApiClient.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/AppCopy.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/YueluTrafficApp.kt`
+- `android/src/main/res/drawable/ic_launcher_background.xml`
+- `android/src/main/res/drawable/ic_launcher_foreground.xml`
+- `android/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+- `android/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml`
+- `android/src/test/java/com/yuelutraffic/app/config/AppConfigTest.kt`
+- `Documentation.md`
+
+Work completed:
+
+- Added configurable backend base URL support through `local.properties` key `yuelu.apiBaseUrl`, `YUELU_API_BASE_URL`, or the emulator default `http://10.0.2.2:8080`.
+- Added runtime backend URL editing on login and profile screens.
+- Added SharedPreferences-backed persisted token/user/base URL storage.
+- Added session restoration on app start and invalid-session clearing back to login with a Chinese message.
+- Added logout from the profile screen.
+- Added an in-app privacy and safety page under 我的.
+- Added launcher adaptive icon resources and manifest icon references.
+- Rewrote key Android UI copy surfaces to remove garbled text and keep Simplified Chinese strings in main user-facing flows.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+
+Results:
+
+- Android unit tests passed, including backend URL normalization checks.
+- Android debug APK build passed.
+- Backend tests passed; backend code was not changed in this milestone.
+- Android Chinese text scan passed.
+- Safety text scan passed.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Use SharedPreferences for the first persisted session implementation to keep dependencies light.
+- Keep build-time default backend URL configurable without committing local machine addresses.
+- Add release icon resources now, while deferring detailed launch-screen styling to the map/release milestone if needed.
+
+Assumptions:
+
+- Persisting token and non-sensitive user summary locally is acceptable for this phase; stronger credential storage can be added later if required.
+- The backend remains the authority for whether a restored token is valid.
+
+Next step:
+
+- Start Milestone 2 by connecting accident list, accident creation, contact request, and contact confirmation to backend APIs.
 
 ---
 
@@ -1518,6 +1592,7 @@ Next step:
 | 2026-05-09 | Use a lightweight Android `HttpURLConnection` client for the first backend connection milestone. | Avoids adding Retrofit/OkHttp before the core API workflow needs justify extra dependencies. |
 | 2026-05-09 | Keep PowerShell validation scripts ASCII-only internally when matching Chinese phrases. | Windows PowerShell may parse UTF-8 `.ps1` files without BOM incorrectly; Unicode code points keep the scripts portable. |
 | 2026-05-09 | Start a new milestone sequence for the full integration and release-preparation prompt. | The root `Prompt.md` now defines a materially larger phase than the completed Chinese UI redesign work. |
+| 2026-05-09 | Use SharedPreferences for first-pass Android session persistence. | It satisfies persistent login/logout without introducing additional dependencies; the backend still validates the token on app start. |
 
 ## Assumptions
 
@@ -1536,6 +1611,11 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Full integration Milestone 1 Android tests passed, including backend URL config tests. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 1 Android debug APK build passed with launcher icon resources. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests passed; backend code was unchanged in Milestone 1. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Android Chinese text scan passed after session/config/privacy UI changes. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed after privacy/safety page addition. |
 | 2026-05-09 | `Test-Path docs\prompts\2026-05-09-yuelu-traffic-chinese-ui-redesign.md` | Passed | Confirmed the previous active prompt is archived for the new full integration phase. |
 | 2026-05-09 | `Select-String -Path Prompt.md -Pattern 'Full Android backend API integration\|Persistent session\|Map SDK\|Release Preparation'` | Passed | Confirmed the active prompt contains the new phase's core scope. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check` | Passed | Final Chinese UI redesign Milestone 7 Gradle check passed. |
