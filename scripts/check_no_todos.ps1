@@ -17,10 +17,10 @@ foreach ($path in $paths) {
                 (Resolve-Path $_.FullName).Path -ne $selfPath
             }
             if ($files.Count -gt 0) {
-                $matches += $files | Select-String -Pattern "TODO", "FIXME" -SimpleMatch -ErrorAction SilentlyContinue
+                $matches += $files | Select-String -Pattern "TODO", "FIXME" -SimpleMatch -CaseSensitive -ErrorAction SilentlyContinue
             }
         } elseif ((Resolve-Path $item.FullName).Path -ne $selfPath) {
-            $matches += Select-String -Path $path -Pattern "TODO", "FIXME" -SimpleMatch -ErrorAction SilentlyContinue
+            $matches += Select-String -Path $path -Pattern "TODO", "FIXME" -SimpleMatch -CaseSensitive -ErrorAction SilentlyContinue
         }
     }
 }

@@ -1,23 +1,37 @@
 # Yuelu Traffic
 
-Yuelu Traffic is an Android-based crowdsourced traffic safety and incident reporting app for the Central South University and Lushan South Road pilot area.
+Yuelu Traffic is an Android-based crowdsourced traffic safety and incident reporting project for the Central South University and Lushan South Road pilot area.
 
-The project is being implemented milestone by milestone from `Prompt.md`, `Plan.md`, and `Implement.md`. Current code contains the first runnable skeleton: a Spring Boot backend module and a Jetpack Compose Android module.
+The repository contains:
 
-## Current Modules
-
-- `backend/` - Java 21 Spring Boot REST API.
 - `android/` - Kotlin Jetpack Compose Android app.
-- `docs/` - architecture and project notes.
-- `scripts/` - reserved for helper and validation scripts.
+- `backend/` - Java 21 Spring Boot REST API.
+- `backend/src/main/resources/db/migration/` - Flyway database migrations.
+- `docker-compose.yml` - PostgreSQL plus backend deployment path.
+- `scripts/` - validation helpers.
+- `docs/Architecture.md` - design notes and API outline.
+
+## Implemented MVP Surface
+
+- Lightweight student-number login with explicit privacy acknowledgement.
+- Backend hashing of student numbers; public APIs return only non-sensitive public user codes.
+- Traffic report create/list/detail APIs with pilot-area validation.
+- MVP report types: traffic management presence, construction, congestion, road control, and accident or abnormal road condition.
+- Default expiration: congestion 30 minutes, traffic management 6 hours, construction 12 hours, road control 12 hours, accident/hazard 4 hours.
+- Community feedback for confirm-valid and no-longer-valid states.
+- Confidence, points, reputation, title, leaderboard, and posting restriction behavior.
+- Accident board APIs and mutual-confirmation contact exchange.
+- Admin APIs for review queue, report moderation, accident moderation, and user posting restrictions.
+- Android local MVP UI for login/privacy notice, map-style report markers, report submission/feedback, leaderboard, accident board, contact confirmation, and admin actions.
 
 ## Prerequisites
 
-- JDK 21. Android Studio's bundled JBR 21 is sufficient.
+- JDK 21. Android Studio's bundled JBR 21 works.
 - Android SDK with API 35 installed.
-- Gradle wrapper from this repository.
+- PowerShell on Windows.
+- Docker Desktop or compatible Docker Engine only if running the PostgreSQL Compose stack.
 
-If Java or Android SDK are not on `PATH`, set them for the current PowerShell session before running Gradle:
+If Java or Android SDK are not on `PATH`, set them for the current PowerShell session:
 
 ```powershell
 $env:JAVA_HOME="D:\Android Studio\jbr"
@@ -25,29 +39,18 @@ $env:ANDROID_HOME="D:\AndroidDev\AndroidSDK"
 $env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
 ```
 
-Adjust those paths for your machine.
+Adjust paths for your machine.
 
-## Run and Validate the Skeleton
+## Validate
 
 From the repository root:
 
 ```powershell
-.\gradlew.bat :backend:test
+.\gradlew.bat check
+powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1
 .\gradlew.bat :backend:bootJar
-.\gradlew.bat :android:testDebugUnitTest
 .\gradlew.bat :android:assembleDebug
-```
-
-Run the backend locally:
-
-```powershell
-.\gradlew.bat :backend:bootRun
-```
-
-Then check:
-
-```powershell
-Invoke-RestMethod http://localhost:8080/api/v1/health
 ```
 
 The Android debug APK is generated at:
@@ -56,9 +59,23 @@ The Android debug APK is generated at:
 android/build/outputs/apk/debug/android-debug.apk
 ```
 
-## Current API Examples
+## Run Backend Locally
 
-Create or reuse a lightweight student-number-based app user. The student number is hashed by the backend and is not returned by public APIs.
+The default backend profile uses a local H2 file database for credential-free development:
+
+```powershell
+.\gradlew.bat :backend:bootRun
+```
+
+Health check:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/v1/health
+```
+
+## Backend API Workflow
+
+Create or reuse a student-number-based app user. The backend stores a salted hash and does not return the raw student number.
 
 ```powershell
 $login = Invoke-RestMethod `
@@ -70,21 +87,7 @@ $login = Invoke-RestMethod `
 $token = $login.accessToken
 ```
 
-Read the current private session summary:
-
-```powershell
-Invoke-RestMethod `
-  -Uri http://localhost:8080/api/v1/me `
-  -Headers @{ Authorization = "Bearer $token" }
-```
-
-Read the public leaderboard, which uses non-sensitive public user codes:
-
-```powershell
-Invoke-RestMethod http://localhost:8080/api/v1/leaderboard
-```
-
-Create and evaluate a traffic report:
+Create a traffic report:
 
 ```powershell
 $report = Invoke-RestMethod `
@@ -100,7 +103,11 @@ $report = Invoke-RestMethod `
     "description":"Northbound slow traffic",
     "initialCredibility":50
   }'
+```
 
+Evaluate the report:
+
+```powershell
 Invoke-RestMethod `
   -Method Post `
   -Uri "http://localhost:8080/api/v1/reports/$($report.id)/feedback" `
@@ -109,13 +116,7 @@ Invoke-RestMethod `
   -Body '{"feedbackType":"CONFIRM_VALID"}'
 ```
 
-List active pilot-area reports:
-
-```powershell
-Invoke-RestMethod "http://localhost:8080/api/v1/reports?minLat=28.12&minLng=112.88&maxLat=28.21&maxLng=112.99"
-```
-
-Create an accident-board post and start mutual contact exchange:
+Create an accident-board post and contact request:
 
 ```powershell
 $accident = Invoke-RestMethod `
@@ -140,7 +141,9 @@ $exchange = Invoke-RestMethod `
 
 Contact values are returned only after the other involved user confirms the exchange.
 
-Admin users are configured with `YUELU_ADMIN_STUDENT_NUMBERS`. For local development, `ADMIN-DEMO` is enabled by default:
+## Admin Workflow
+
+Admin users are configured with `YUELU_ADMIN_STUDENT_NUMBERS`. Local development enables `ADMIN-DEMO` by default.
 
 ```powershell
 $admin = Invoke-RestMethod `
@@ -154,7 +157,7 @@ Invoke-RestMethod `
   -Headers @{ Authorization = "Bearer $($admin.accessToken)" }
 ```
 
-## Docker Deployment Path
+## PostgreSQL Deployment Path
 
 Copy `.env.example` to `.env`, replace the placeholder values, then run:
 
@@ -162,180 +165,20 @@ Copy `.env.example` to `.env`, replace the placeholder values, then run:
 docker compose up --build
 ```
 
-The Compose stack starts PostgreSQL and the backend. The backend uses Flyway migrations at startup and listens on `http://localhost:8080` by default.
-
-## Safety Text Check
-
-Run this before release-facing changes:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1
-```
-
-The scan checks app/backend/README user-facing text for prohibited wording related to unlawful enforcement avoidance.
-
-## Control Files
-
-### `AGENTS.md`
-
-Global behavior rules for Codex in this repository.
-
-It defines Codex's role, required reading, file priority, working principles, code quality rules, validation rules, documentation rules, git rules, prohibited actions, and final reporting format.
-
-### `Prompt.md`
-
-The project requirements source of truth.
-
-Fill this file before implementation begins. It describes what to build, who it is for, P0/P1/P2 requirements, non-goals, constraints, inputs, outputs, data needs, dependencies, acceptance criteria, and the final Done When checklist.
-
-### `Plan.md`
-
-The milestone plan and validation checklist.
-
-It tells Codex what order to work in and how each stage should be validated. The default milestones start with project understanding, then a minimal running skeleton, then P0 features, integration, tests, and final documentation.
-
-### `Implement.md`
-
-Codex's autonomous execution manual.
-
-It defines how Codex should read the control files, find the current milestone, implement only the required work, run validation, fix failures, update `Documentation.md`, and continue until completion or a real blocker.
-
-### `Documentation.md`
-
-The live project log.
-
-It records current status, selected stack, milestone progress, work log entries, decisions, assumptions, validation history, known issues, and handoff notes.
-
-### `src/`
-
-Legacy workbench placeholder. Business code now lives in `android/` and `backend/`.
-
-### `tests/`
-
-Default location for tests.
-
-### `scripts/`
-
-Default location for helper scripts, setup scripts, validation scripts, or data-processing scripts.
-
-### `docs/`
-
-Default location for additional project documentation, design notes, diagrams, reports, or generated documentation.
-
-## How to Fill `Prompt.md`
-
-Before asking Codex to implement a project, edit `Prompt.md`.
-
-At minimum, fill in:
-
-1. Project name
-2. One-sentence goal
-3. Background
-4. Target users
-5. Core problem
-6. Project type
-7. P0 requirements
-8. Non-goals
-9. Technical constraints
-10. Inputs and outputs
-11. Data requirements
-12. External dependencies
-13. Acceptance criteria
-14. Done When checklist
-
-Keep P0 small and concrete. P0 should describe the minimum useful version, not the final dream version.
-
-Good P0 examples:
-
-- "A user can upload a CSV and see a summary table."
-- "The API exposes `POST /items` and `GET /items` with validation."
-- "The Android app opens to a main screen and saves one local note."
-- "The ML baseline trains on a small sample and prints accuracy."
-
-Weak P0 examples:
-
-- "Make it smart."
-- "Support everything."
-- "Build a complete production system."
-
-## How to Ask Codex to Start
-
-After `Prompt.md` is filled, ask Codex something like:
-
-```text
-Please read AGENTS.md, Prompt.md, Plan.md, Implement.md, and Documentation.md, then start executing the project according to Implement.md from the first unfinished milestone.
-```
-
-Codex should then:
-
-1. Read the control files.
-2. Identify the current unfinished milestone.
-3. Implement only that milestone.
-4. Run validation.
-5. Update `Documentation.md`.
-6. Continue to the next milestone unless blocked.
-
-## Recommended Development Flow
-
-1. Fill `Prompt.md`.
-2. Ask Codex to run Milestone 0.
-3. Review the selected stack and assumptions in `Documentation.md`.
-4. Ask Codex to continue to Milestone 1.
-5. Review the minimal running skeleton.
-6. Let Codex implement P0 features one milestone at a time.
-7. Validate after each milestone.
-8. Keep P1 and P2 features out until P0 is stable.
-9. Finish with Milestone 7 documentation and delivery.
-
-## Adapting Common Project Types
-
-### Android App
-
-Use `Prompt.md` to specify target SDK, UI requirements, device requirements, storage needs, and main user flows. Validation usually includes `./gradlew test` and `./gradlew assembleDebug`.
-
-### Web Frontend
-
-Specify framework preference, pages, components, browser support, styling constraints, and expected user flows. Validation often includes `npm test`, `npm run lint`, `npm run build`, and a visual check.
-
-### Full-Stack Web App
-
-Specify frontend, backend, API boundaries, database, authentication needs, and deployment expectations. Validation should include backend tests, frontend build, and at least one end-to-end manual workflow.
-
-### Backend API Service
-
-Specify endpoints, request and response formats, validation rules, persistence, authentication, and error behavior. Validation should include automated tests and manual API calls when useful.
-
-### Python Tool
-
-Specify command-line usage, inputs, outputs, file formats, and error cases. Validation usually includes `python -m pytest` and sample command execution.
-
-### Desktop App
-
-Specify operating system targets, UI framework preference, packaging expectations, file access, and main workflows. Validation should include launch steps and manual workflow checks.
-
-### Database Project
-
-Specify database engine, schema, seed data, queries, migrations, and expected outputs. Validation should run SQL scripts and record results.
-
-### Data Analysis Project
-
-Specify datasets, analysis questions, output charts or tables, reproducibility needs, and expected report artifacts. Validation should run the analysis path on sample data.
-
-### ML / NLP Baseline
-
-Specify dataset, model family, metrics, baseline method, training constraints, and expected artifacts. Validation should run on a small sample before larger runs.
-
-### Course Assignment or Research Code
-
-Specify grading requirements, deliverables, allowed libraries, report format, and reproducibility expectations. Validation should match the assignment or paper requirements as closely as possible.
-
-## Notes and Constraints
-
-- This workbench does not choose a technology stack until `Prompt.md` describes the actual project.
-- Do not add business functionality before requirements are filled in.
-- Keep the first implementation minimal.
-- Every milestone should have a validation method.
-- Important changes must be recorded in `Documentation.md`.
-- If Codex makes an assumption, it must record that assumption.
-- If Codex is blocked, it must stop, record the reason, list attempted fixes, and suggest the next smallest action.
-- Avoid complex dependencies and infrastructure unless the project explicitly needs them.
+The Compose stack starts PostgreSQL and the backend. Flyway migrations run at backend startup.
+
+## Safety and Privacy Notes
+
+- Student numbers are normalized and hashed on the backend.
+- Public responses use `publicCode` and do not include raw student numbers or student-number hashes.
+- Accident contact values are omitted from public accident APIs and hidden until mutual confirmation.
+- The app is framed as traffic safety and public road-condition reporting. It must not provide routing, tactics, or instructions for unlawful traffic behavior.
+- Run `scripts/check_safety_text.ps1` before release-facing text changes.
+
+## Known Limitations
+
+- The Android UI currently uses local in-app state for MVP workflow demonstration; backend APIs are implemented and tested separately.
+- The Android map is a credential-free Compose map-style panel, not a production AMap SDK view yet.
+- Android emulator or physical-device manual testing was not available in this session; validation used unit tests, Android lint, and debug APK build.
+- Docker is not installed in the current environment, so `docker compose up --build` was documented but not locally executed.
+- Contact values are protected from public APIs, but production-grade field encryption should be added before real deployment.
