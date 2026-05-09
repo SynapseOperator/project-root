@@ -37,6 +37,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.yuelutraffic.app.auth.PRIVACY_NOTICE
 import com.yuelutraffic.app.auth.publicCodeForStudentNumber
+import com.yuelutraffic.app.accidents.AccidentPostStatus
+import com.yuelutraffic.app.accidents.AccidentPostUi
+import com.yuelutraffic.app.accidents.ContactExchangeStatus
+import com.yuelutraffic.app.accidents.confirmContact
+import com.yuelutraffic.app.accidents.createAccidentPost
+import com.yuelutraffic.app.accidents.requestContact
+import com.yuelutraffic.app.accidents.sampleAccidentPosts
 import com.yuelutraffic.app.traffic.FeedbackChoice
 import com.yuelutraffic.app.traffic.TrafficReportStatus
 import com.yuelutraffic.app.traffic.TrafficReportType
@@ -131,7 +138,9 @@ private fun StudentEntryScreen(onEnter: (String) -> Unit) {
 @Composable
 private fun SignedInSkeleton(publicCode: String) {
     val reports = remember { mutableStateListOf<TrafficReportUi>().also { it.addAll(sampleTrafficReports()) } }
+    val accidents = remember { mutableStateListOf<AccidentPostUi>().also { it.addAll(sampleAccidentPosts()) } }
     var selectedTab by rememberSaveable { mutableStateOf("Map") }
+    var postingRestricted by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -151,15 +160,40 @@ private fun SignedInSkeleton(publicCode: String) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { selectedTab = "Map" }) { Text("Map") }
             Button(onClick = { selectedTab = "Submit" }) { Text("Submit") }
+            Button(onClick = { selectedTab = "Accidents" }) { Text("Accidents") }
             Button(onClick = { selectedTab = "Leaderboard" }) { Text("Leaderboard") }
+            Button(onClick = { selectedTab = "Admin" }) { Text("Admin") }
         }
         when (selectedTab) {
             "Submit" -> SubmitReportPanel(
+                postingRestricted = postingRestricted,
                 onSubmit = { report -> reports.add(0, report) },
+            )
+            "Accidents" -> AccidentBoardPanel(
+                accidents = accidents,
+                onAdd = { accidents.add(0, it) },
+                onUpdate = { updated ->
+                    val index = accidents.indexOfFirst { it.id == updated.id }
+                    if (index >= 0) accidents[index] = updated
+                },
             )
             "Leaderboard" -> LeaderboardPanel(
                 publicCode = publicCode,
                 reportCount = reports.count { it.status == TrafficReportStatus.ACTIVE },
+            )
+            "Admin" -> AdminPanel(
+                reports = reports,
+                accidents = accidents,
+                postingRestricted = postingRestricted,
+                onHideReport = {
+                    val index = reports.indexOfFirst { it.status == TrafficReportStatus.ACTIVE || it.status == TrafficReportStatus.UNDER_REVIEW }
+                    if (index >= 0) reports[index] = reports[index].copy(status = TrafficReportStatus.HIDDEN)
+                },
+                onHideAccident = {
+                    val index = accidents.indexOfFirst { it.status == AccidentPostStatus.OPEN }
+                    if (index >= 0) accidents[index] = accidents[index].copy(status = AccidentPostStatus.HIDDEN)
+                },
+                onToggleRestriction = { postingRestricted = !postingRestricted },
             )
             else -> TrafficMapPanel(
                 reports = reports,
@@ -243,12 +277,18 @@ private fun ReportCard(report: TrafficReportUi, onFeedback: (String, FeedbackCho
 }
 
 @Composable
-private fun SubmitReportPanel(onSubmit: (TrafficReportUi) -> Unit) {
+private fun SubmitReportPanel(
+    postingRestricted: Boolean,
+    onSubmit: (TrafficReportUi) -> Unit,
+) {
     var selectedType by rememberSaveable { mutableStateOf(TrafficReportType.CONGESTION) }
     var locationLabel by rememberSaveable { mutableStateOf("Lushan South Road") }
     var description by rememberSaveable { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (postingRestricted) {
+            Text("Posting is temporarily restricted for this user.")
+        }
         Text("Report type", style = MaterialTheme.typography.titleMedium)
         TrafficReportType.entries.forEach { type ->
             Button(onClick = { selectedType = type }) {
@@ -269,12 +309,110 @@ private fun SubmitReportPanel(onSubmit: (TrafficReportUi) -> Unit) {
             label = { Text("Optional description") },
         )
         Button(
+            enabled = !postingRestricted,
             onClick = {
                 onSubmit(createTrafficReport(selectedType, locationLabel, description))
                 description = ""
             },
         ) {
             Text("Submit report")
+        }
+    }
+}
+
+@Composable
+private fun AccidentBoardPanel(
+    accidents: List<AccidentPostUi>,
+    onAdd: (AccidentPostUi) -> Unit,
+    onUpdate: (AccidentPostUi) -> Unit,
+) {
+    var locationLabel by rememberSaveable { mutableStateOf("Lushan South Road") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var contactValue by rememberSaveable { mutableStateOf("my-contact") }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Accident board", style = MaterialTheme.typography.titleMedium)
+        Text("Contact details stay hidden until both sides confirm.")
+        OutlinedTextField(
+            value = locationLabel,
+            onValueChange = { locationLabel = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Location") },
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Description") },
+        )
+        Button(onClick = {
+            onAdd(createAccidentPost(locationLabel, description.ifBlank { "Minor incident" }))
+            description = ""
+        }) {
+            Text("Post accident")
+        }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(accidents, key = { it.id }) { accident ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(accident.locationLabel, style = MaterialTheme.typography.titleMedium)
+                        Text(accident.description, style = MaterialTheme.typography.bodySmall)
+                        Text("Status ${accident.status} · contact ${accident.contactExchangeStatus}")
+                        OutlinedTextField(
+                            value = contactValue,
+                            onValueChange = { contactValue = it },
+                            label = { Text("Private contact") },
+                            singleLine = true,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                enabled = accident.contactExchangeStatus == ContactExchangeStatus.NONE,
+                                onClick = { onUpdate(accident.requestContact()) },
+                            ) {
+                                Text("Request contact")
+                            }
+                            Button(
+                                enabled = accident.contactExchangeStatus == ContactExchangeStatus.PENDING,
+                                onClick = { onUpdate(accident.confirmContact(contactValue)) },
+                            ) {
+                                Text("Confirm match")
+                            }
+                        }
+                        accident.visibleContacts.forEach { contact ->
+                            Text(contact, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdminPanel(
+    reports: List<TrafficReportUi>,
+    accidents: List<AccidentPostUi>,
+    postingRestricted: Boolean,
+    onHideReport: () -> Unit,
+    onHideAccident: () -> Unit,
+    onToggleRestriction: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Admin review", style = MaterialTheme.typography.titleMedium)
+        Text("Reports needing attention: ${reports.count { it.status == TrafficReportStatus.UNDER_REVIEW }}")
+        Text("Open accident posts: ${accidents.count { it.status == AccidentPostStatus.OPEN }}")
+        Button(onClick = onHideReport) {
+            Text("Hide selected report")
+        }
+        Button(onClick = onHideAccident) {
+            Text("Hide accident post")
+        }
+        Button(onClick = onToggleRestriction) {
+            Text(if (postingRestricted) "Clear posting restriction" else "Apply posting restriction")
         }
     }
 }

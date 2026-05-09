@@ -15,4 +15,6 @@ public interface TrafficReportRepository extends JpaRepository<TrafficReport, UU
             double maxLongitude);
 
     List<TrafficReport> findByStatusAndDefaultExpiresAtBefore(ReportStatus status, Instant now);
+
+    List<TrafficReport> findByStatusOrderBySubmittedAtDesc(ReportStatus status);
 }

@@ -115,6 +115,45 @@ List active pilot-area reports:
 Invoke-RestMethod "http://localhost:8080/api/v1/reports?minLat=28.12&minLng=112.88&maxLat=28.21&maxLng=112.99"
 ```
 
+Create an accident-board post and start mutual contact exchange:
+
+```powershell
+$accident = Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8080/api/v1/accidents `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body '{
+    "latitude":28.1703,
+    "longitude":112.9388,
+    "locationLabel":"Lushan South Road",
+    "description":"Minor incident, looking for the other involved party"
+  }'
+
+$exchange = Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8080/api/v1/accidents/$($accident.id)/contact-requests" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body '{"contactType":"WECHAT","contactValue":"private-contact"}'
+```
+
+Contact values are returned only after the other involved user confirms the exchange.
+
+Admin users are configured with `YUELU_ADMIN_STUDENT_NUMBERS`. For local development, `ADMIN-DEMO` is enabled by default:
+
+```powershell
+$admin = Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8080/api/v1/auth/student `
+  -ContentType "application/json" `
+  -Body '{"studentNumber":"ADMIN-DEMO","privacyAcknowledged":true}'
+
+Invoke-RestMethod `
+  -Uri http://localhost:8080/api/v1/admin/review-queue `
+  -Headers @{ Authorization = "Bearer $($admin.accessToken)" }
+```
+
 ## Control Files
 
 ### `AGENTS.md`

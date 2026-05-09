@@ -63,6 +63,15 @@ public class AuthService {
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Token user no longer exists"));
     }
 
+    @Transactional(readOnly = true)
+    public AppUser requireAdmin(String authorizationHeader) {
+        AppUser user = requireUser(authorizationHeader);
+        if (user.getRole() != com.yuelutraffic.user.UserRole.ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Admin access is required");
+        }
+        return user;
+    }
+
     public static String normalizeStudentNumber(String rawStudentNumber) {
         return rawStudentNumber == null ? "" : rawStudentNumber.trim().toUpperCase(Locale.ROOT);
     }

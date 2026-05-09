@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Milestone 3 complete; ready for Milestone 4 core P0 feature 3
+Milestone 4 complete; ready for Milestone 5 integration and error handling
 
 Last updated:
 
@@ -53,8 +53,8 @@ This stack keeps the Android client native, keeps the backend conservative and d
 | Milestone 1 — Minimal Running Skeleton | Completed | Root Gradle multi-project, Spring Boot health endpoint, Compose Android startup screen, wrapper, README run instructions, and validation commands are in place. |
 | Milestone 2 — Core P0 Feature 1 | Completed | Implemented student-number login with privacy acknowledgement, backend hashing, bearer token, `/me`, public leaderboard redaction, Android privacy entry screen, and tests. |
 | Milestone 3 — Core P0 Feature 2 | Completed | Implemented traffic report APIs, pilot-area validation, default expiration, feedback, confidence scoring, reputation/points events, Android map-style report UI, submission, feedback, and tests. |
-| Milestone 4 — Core P0 Feature 3 | Next | Implement accident board, mutual contact exchange, admin moderation, abuse/restriction workflows, and remaining persistence. |
-| Milestone 5 — Integration and Error Handling | Not started | |
+| Milestone 4 — Core P0 Feature 3 | Completed | Implemented accident posts, mutual contact exchange, admin review/moderation, posting restrictions, Android accident/admin panels, and tests. |
+| Milestone 5 — Integration and Error Handling | Next | Exercise complete workflows, harden expected failures, add deployment persistence support, and scan safety/privacy boundaries. |
 | Milestone 6 — Tests and Quality Check | Not started | |
 | Milestone 7 — Final Documentation and Delivery | Not started | |
 
@@ -525,6 +525,78 @@ Next step:
 
 ---
 
+### 2026-05-09 - Milestone 4 Accident Board and Admin Moderation
+
+Date: 2026-05-09
+
+Milestone: Milestone 4 - Core P0 Feature 3
+
+Files changed:
+
+- `backend/src/main/java/com/yuelutraffic/auth/AuthService.java`
+- `backend/src/main/java/com/yuelutraffic/reports/TrafficReportRepository.java`
+- `backend/src/main/java/com/yuelutraffic/accidents/*`
+- `backend/src/main/java/com/yuelutraffic/admin/*`
+- `backend/src/main/resources/db/migration/V3__create_accidents_and_admin.sql`
+- `backend/src/test/java/com/yuelutraffic/accidents/AccidentApiTest.java`
+- `backend/src/test/java/com/yuelutraffic/admin/AdminApiTest.java`
+- `android/src/main/java/com/yuelutraffic/app/MainActivity.kt`
+- `android/src/main/java/com/yuelutraffic/app/accidents/AccidentModels.kt`
+- `android/src/main/java/com/yuelutraffic/app/traffic/TrafficModels.kt`
+- `android/src/test/java/com/yuelutraffic/app/accidents/AccidentModelsTest.kt`
+- `README.md`
+- `Documentation.md`
+
+Work completed:
+
+- Added accident board persistence and APIs for create, list, and detail.
+- Added mutual-confirmation contact exchange APIs.
+- Ensured contact values are omitted from accident public APIs and hidden from exchange responses until both sides confirm.
+- Added admin-only review queue, report moderation, accident moderation, and user posting restriction APIs.
+- Added admin action audit persistence.
+- Integrated posting restrictions into report and accident creation.
+- Added Android local accident board, contact request/confirm flow, and admin moderation panel.
+- Added README examples for accident contact exchange and admin review queue.
+
+Commands run:
+
+- `.\gradlew.bat :backend:test`
+- `.\gradlew.bat :android:testDebugUnitTest`
+- `.\gradlew.bat :backend:bootJar`
+- `.\gradlew.bat :android:assembleDebug`
+
+Results:
+
+- Backend tests passed, including accident contact redaction before mutual confirmation, participant-only contact inspection, admin-only access, moderation, and posting restrictions.
+- Android unit tests passed for accident contact visibility behavior.
+- Backend boot jar build passed.
+- Android debug APK build passed.
+
+Failures:
+
+- None during Milestone 4 validation.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Keep P0 admin functionality in backend APIs and Android-local panel rather than introducing a separate web frontend.
+- Use configuration-driven admin student numbers; local `ADMIN-DEMO` remains a development convenience only.
+- Store contact values in a protected internal field and never expose them through public accident APIs; production-grade encryption remains a hardening item.
+
+Assumptions:
+
+- For MVP, any other involved app user may confirm an accident contact request if no target user has been assigned yet.
+- Posting restriction enforcement through `app_users.posting_ban_until` is sufficient for P0, with admin actions providing audit history.
+
+Next step:
+
+- Start Milestone 5 by running integrated workflows, adding deployment support, improving error handling, and checking safety/privacy text boundaries.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -574,6 +646,10 @@ Next step:
 | 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed | Milestone 3 Android traffic model tests passed. |
 | 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 3 backend jar build passed. |
 | 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 3 Android debug APK build passed. |
+| 2026-05-09 | `.\gradlew.bat :backend:test` | Passed | Milestone 4 accident contact privacy and admin moderation tests passed. |
+| 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed | Milestone 4 Android accident contact visibility tests passed. |
+| 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 4 backend jar build passed. |
+| 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 4 Android debug APK build passed. |
 
 ## Known Issues
 

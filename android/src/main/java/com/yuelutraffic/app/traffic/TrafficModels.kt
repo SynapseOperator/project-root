@@ -18,6 +18,7 @@ enum class TrafficReportType(
 enum class TrafficReportStatus {
     ACTIVE,
     EXPIRED,
+    HIDDEN,
     UNDER_REVIEW,
 }
 
