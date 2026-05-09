@@ -9,13 +9,13 @@ It records what Codex did, why it did it, what is currently complete, what faile
 Status:
 
 - [ ] Not started
-- [x] In progress
+- [ ] In progress
 - [ ] Blocked
-- [ ] Completed
+- [x] Completed
 
 Current milestone:
 
-Full integration phase Milestone 6 complete; ready for Milestone 7 final handoff
+Full integration phase Milestone 7 complete; all known active-prompt milestones complete
 
 Last updated:
 
@@ -58,7 +58,7 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 4 - Core P0 Feature 3 | Completed | Android admin panel now loads backend review queue, moderates reports and accidents, and submits user posting restrictions through backend admin APIs. |
 | Milestone 5 - Integration and Error Handling | Completed | Added AMap Android 3D SDK dependency, secure local key injection, provider fallback, MapView marker rendering, splash background, local configuration example, and README connection guide. |
 | Milestone 6 - Tests and Quality Check | Completed | Full Gradle `check`, backend boot jar, Android debug APK build, Chinese text scan, safety scan, TODO scan, and ADB device availability check were run. |
-| Milestone 7 - Final Documentation and Delivery | Next | Final README/Documentation updates, acceptance notes, manual checklist, and final validation. |
+| Milestone 7 - Final Documentation and Delivery | Completed | README and Documentation were updated for full backend integration, map SDK configuration, release checklist, known limitations, and final handoff notes. |
 
 ### Previous Chinese UI Redesign Phase
 
@@ -535,6 +535,62 @@ Assumptions:
 Next step:
 
 - Start Milestone 7 by finalizing README/Documentation handoff notes, acceptance checklist, and final validation status.
+
+---
+
+### 2026-05-09 - Full Integration Phase Milestone 7
+
+Date: 2026-05-09
+
+Milestone: Milestone 7 - Final Documentation and Delivery
+
+Files changed:
+
+- `README.md`
+- `Documentation.md`
+
+Work completed:
+
+- Updated README to describe the current full backend-connected Android surface.
+- Added backend API examples for leaderboard/current user, accident board, and admin review/moderation.
+- Added local Android configuration guidance for backend URLs, AMap SDK key injection, and mock-map forcing.
+- Added a manual release checklist for emulator/phone validation, backend workflows, admin workflows, and AMap marker rendering.
+- Updated final handoff notes and remaining risks for the full integration and release-preparation phase.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:bootJar`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1`
+- `adb devices`
+
+Results:
+
+- Final validation passed after documentation updates.
+- ADB is available but no emulator or phone is attached for manual UI validation.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Keep device/AMap rendering verification as a manual release checklist item rather than claiming it as locally validated.
+
+Assumptions:
+
+- All active prompt P0 implementation tasks that can be validated in this environment are complete.
+
+Next step:
+
+- Run the documented manual release checklist on an emulator or physical phone with a live backend and valid AMap Android key.
 
 ---
 
@@ -1929,6 +1985,13 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check` | Passed | Final full integration Milestone 7 Gradle check passed after README and Documentation updates. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:bootJar` | Passed | Final full integration Milestone 7 backend boot jar build passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Final full integration Milestone 7 Android debug APK build passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Final full integration Milestone 7 Android Chinese text scan passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Final full integration Milestone 7 safety text scan passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1` | Passed | Final full integration Milestone 7 TODO/FIXME scan passed. |
+| 2026-05-09 | `adb devices` | No devices attached | Final device check listed no connected emulator or phone. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check` | Passed | Full integration Milestone 6 Gradle check passed, including Android lint, Android unit tests, release unit tests, and backend tests. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:bootJar` | Passed | Full integration Milestone 6 backend boot jar build passed. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 6 Android debug APK build passed. |
@@ -2062,23 +2125,24 @@ Next step:
 
 ## Final Handoff Notes
 
-Chinese UI redesign phase milestone execution is complete through Milestone 7.
+Full integration and release-preparation phase milestone execution is complete through Milestone 7.
 
 Final deliverables:
 
 - Backend API: `backend/`
-- Android app: `android/` with Simplified Chinese map-first Compose UI
+- Android app: `android/` with Simplified Chinese map-first Compose UI and backend-connected workflows
 - Android debug APK path after build: `android/build/outputs/apk/debug/android-debug.apk`
 - PostgreSQL deployment path: `docker-compose.yml` and `Dockerfile.backend`
+- Local Android configuration template: `local.properties.example`
+- Production map SDK provider: `android/src/main/java/com/yuelutraffic/app/map/`
 - Validation helpers: `scripts/check_android_chinese_text.ps1`, `scripts/check_safety_text.ps1`, and `scripts/check_no_todos.ps1`
 
 Implemented in this phase:
 
-- Android login and `/me` session display connect to backend APIs.
-- Android traffic report list, creation, detail refresh, and feedback connect to backend APIs.
-- Android UI uses Simplified Chinese main navigation and user-facing core workflow text.
-- Android home is map-first with a polished credential-free Compose mock map.
-- Accident board, leaderboard, and admin surfaces are Chinese local/demo pages with clear scope labels.
+- Persistent Android login/session restoration, logout, and configurable backend URL.
+- Backend-connected login, `/me`, traffic report list/detail/create/feedback, accident board list/create/contact request/contact confirmation, leaderboard/profile refresh, and admin review/moderation/restriction.
+- AMap Android 3D SDK provider with local key injection, privacy initialization, marker rendering, and mock fallback.
+- App icon baseline, launch background, privacy/safety page, README guides, and manual release checklist.
 
 Final validation status:
 
@@ -2090,10 +2154,11 @@ Final validation status:
 - TODO/FIXME scan passed.
 - Docker Compose runtime validation was not run because Docker is unavailable.
 - Android emulator/manual workflow validation was not run because no Android device was available.
+- AMap runtime rendering still needs validation with a real Android key and emulator or phone.
 
 Recommended next action:
 
-- Run emulator or physical-device end-to-end validation against a live backend, then integrate the production map provider behind the documented adapter in a later phase.
+- Run the README manual release checklist against a live backend on an emulator or physical phone, including AMap rendering with a valid Android platform key.
 
 ### 2026-05-09 - GitHub Repository Preparation
 

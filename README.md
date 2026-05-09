@@ -167,6 +167,65 @@ Invoke-RestMethod `
   -Body '{"feedbackType":"CONFIRM_VALID"}'
 ```
 
+Leaderboard and current user:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/v1/leaderboard
+
+Invoke-RestMethod `
+  -Uri http://localhost:8080/api/v1/me `
+  -Headers @{ Authorization = "Bearer $token" }
+```
+
+Accident board and contact exchange:
+
+```powershell
+$accident = Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8080/api/v1/accidents `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body '{
+    "latitude":28.1703,
+    "longitude":112.9388,
+    "locationLabel":"麓山南路中南大学门口",
+    "description":"轻微事故，等待双方确认联系方式。"
+  }'
+
+Invoke-RestMethod `
+  -Uri "http://localhost:8080/api/v1/accidents?minLat=28.12&minLng=112.88&maxLat=28.22&maxLng=113.00"
+
+$contactRequest = Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8080/api/v1/accidents/$($accident.id)/contact-requests" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body '{"contactType":"WECHAT","contactValue":"wx-demo"}'
+```
+
+Admin review and moderation, using the local development admin identifier:
+
+```powershell
+$adminLogin = Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8080/api/v1/auth/student `
+  -ContentType "application/json" `
+  -Body '{"studentNumber":"ADMIN-DEMO","privacyAcknowledged":true}'
+
+$adminToken = $adminLogin.accessToken
+
+Invoke-RestMethod `
+  -Uri http://localhost:8080/api/v1/admin/review-queue `
+  -Headers @{ Authorization = "Bearer $adminToken" }
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8080/api/v1/admin/reports/$($report.id)/moderate" `
+  -Headers @{ Authorization = "Bearer $adminToken" } `
+  -ContentType "application/json" `
+  -Body '{"status":"HIDDEN","reason":"Manual admin validation"}'
+```
+
 ## PostgreSQL Deployment Path
 
 Copy `.env.example` to `.env`, replace the placeholder values, then run:
@@ -184,6 +243,22 @@ The Compose stack starts PostgreSQL and the backend. Flyway migrations run at ba
 - Accident contact values are omitted from public accident APIs and hidden until mutual confirmation.
 - The app is framed as traffic safety and public road-condition reporting, not as routing or enforcement-avoidance assistance.
 - Run `scripts/check_safety_text.ps1` and `scripts/check_android_chinese_text.ps1` before release-facing text changes.
+
+## Manual Release Checklist
+
+- Start the backend and confirm `/api/v1/health` returns `ok`.
+- Install `android/build/outputs/apk/debug/android-debug.apk` on an emulator or phone.
+- Confirm login persists after closing and reopening the app.
+- Confirm logout clears the persisted session.
+- Confirm emulator mode reaches the backend through `http://10.0.2.2:8080`.
+- Confirm physical-device mode uses a LAN or public backend URL in the login/profile backend URL field.
+- Submit, refresh, open, and give feedback on a traffic report.
+- Create an accident post, request contact, and confirm contact from a second account.
+- Refresh profile and leaderboard; verify only public codes are shown.
+- Log in as a configured admin and moderate a report, hide an accident post, and restrict a test user.
+- Configure a valid AMap Android key and verify the real map renders markers.
+- Set `yuelu.forceMockMap=true` and verify the mock map fallback still renders.
+- Review the privacy/safety page before release-facing distribution.
 
 ## Known Limitations
 
