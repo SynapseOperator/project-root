@@ -154,6 +154,26 @@ Invoke-RestMethod `
   -Headers @{ Authorization = "Bearer $($admin.accessToken)" }
 ```
 
+## Docker Deployment Path
+
+Copy `.env.example` to `.env`, replace the placeholder values, then run:
+
+```powershell
+docker compose up --build
+```
+
+The Compose stack starts PostgreSQL and the backend. The backend uses Flyway migrations at startup and listens on `http://localhost:8080` by default.
+
+## Safety Text Check
+
+Run this before release-facing changes:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1
+```
+
+The scan checks app/backend/README user-facing text for prohibited wording related to unlawful enforcement avoidance.
+
 ## Control Files
 
 ### `AGENTS.md`

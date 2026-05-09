@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-yuelu_traffic}
+      POSTGRES_USER: ${POSTGRES_USER:-yuelu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yuelu_dev_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - yuelu_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-yuelu} -d ${POSTGRES_DB:-yuelu_traffic}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8080
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-yuelu_traffic}
+      DATABASE_USERNAME: ${POSTGRES_USER:-yuelu}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-yuelu_dev_password}
+      DATABASE_DRIVER: org.postgresql.Driver
+      YUELU_STUDENT_PEPPER: ${YUELU_STUDENT_PEPPER:-dev-compose-pepper-change-for-prod}
+      YUELU_TOKEN_SECRET: ${YUELU_TOKEN_SECRET:-dev-compose-token-secret-change-for-prod}
+      YUELU_ADMIN_STUDENT_NUMBERS: ${YUELU_ADMIN_STUDENT_NUMBERS:-ADMIN-DEMO}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+volumes:
+  yuelu_postgres_data:

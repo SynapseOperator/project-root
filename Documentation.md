@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Milestone 4 complete; ready for Milestone 5 integration and error handling
+Milestone 5 complete; ready for Milestone 6 tests and quality check
 
 Last updated:
 
@@ -54,8 +54,8 @@ This stack keeps the Android client native, keeps the backend conservative and d
 | Milestone 2 — Core P0 Feature 1 | Completed | Implemented student-number login with privacy acknowledgement, backend hashing, bearer token, `/me`, public leaderboard redaction, Android privacy entry screen, and tests. |
 | Milestone 3 — Core P0 Feature 2 | Completed | Implemented traffic report APIs, pilot-area validation, default expiration, feedback, confidence scoring, reputation/points events, Android map-style report UI, submission, feedback, and tests. |
 | Milestone 4 — Core P0 Feature 3 | Completed | Implemented accident posts, mutual contact exchange, admin review/moderation, posting restrictions, Android accident/admin panels, and tests. |
-| Milestone 5 — Integration and Error Handling | Next | Exercise complete workflows, harden expected failures, add deployment persistence support, and scan safety/privacy boundaries. |
-| Milestone 6 — Tests and Quality Check | Not started | |
+| Milestone 5 — Integration and Error Handling | Completed | Added full MVP integration test, malformed request handling, Docker/PostgreSQL deployment files, and safety text scan. Docker runtime could not be executed because Docker is not installed. |
+| Milestone 6 — Tests and Quality Check | Next | Run strongest validation set, add quality checks for API privacy/safety, and document remaining known issues. |
 | Milestone 7 — Final Documentation and Delivery | Not started | |
 
 ## Work Log
@@ -597,6 +597,77 @@ Next step:
 
 ---
 
+### 2026-05-09 - Milestone 5 Integration and Error Handling
+
+Date: 2026-05-09
+
+Milestone: Milestone 5 - Integration and Error Handling
+
+Files changed:
+
+- `backend/src/main/java/com/yuelutraffic/common/ApiExceptionHandler.java`
+- `backend/src/main/java/com/yuelutraffic/auth/TokenService.java`
+- `backend/src/test/java/com/yuelutraffic/integration/MvpWorkflowIntegrationTest.java`
+- `Dockerfile.backend`
+- `docker-compose.yml`
+- `.env.example`
+- `scripts/check_safety_text.ps1`
+- `README.md`
+- `Documentation.md`
+
+Work completed:
+
+- Added an end-to-end backend integration test covering login, report creation, feedback, accident posting, contact exchange, admin restriction, and private-field redaction.
+- Hardened malformed token parsing so invalid bearer tokens return `401` instead of leaking implementation errors.
+- Added consistent `400` JSON responses for unreadable JSON, missing request values, and invalid enum/query values.
+- Added Docker backend image definition and Docker Compose stack with PostgreSQL persistence.
+- Added `.env.example` for deployment configuration placeholders.
+- Added a safety text scan for prohibited user-facing enforcement-avoidance wording.
+- Added README deployment and safety-check instructions.
+
+Commands run:
+
+- `.\gradlew.bat :backend:test`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+- `docker --version`
+- `.\gradlew.bat :android:testDebugUnitTest`
+- `.\gradlew.bat :backend:bootJar`
+- `.\gradlew.bat :android:assembleDebug`
+
+Results:
+
+- Backend tests passed, including the full MVP integration workflow and invalid request cases.
+- Safety text scan passed.
+- Android unit tests passed.
+- Backend boot jar build passed.
+- Android debug APK build passed.
+- Docker CLI is not installed in this environment, so `docker compose up --build` could not be executed locally.
+
+Failures:
+
+- `docker --version` failed because Docker is not installed or not on `PATH`.
+
+Fixes:
+
+- No code fix was possible for missing Docker in the local environment.
+- Documented Docker Compose as a manual deployment validation step.
+
+Decisions:
+
+- Add Docker Compose now so the backend has a concrete PostgreSQL persistence path before final handoff.
+- Keep local Gradle tests on H2 for credential-free validation while Docker Compose covers PostgreSQL deployment configuration.
+- Keep the safety text scan scoped to user-facing code and README rather than requirements/control files that intentionally discuss prohibited behavior.
+
+Assumptions:
+
+- Docker validation can be run on a machine with Docker Desktop or a compatible Docker Engine.
+
+Next step:
+
+- Start Milestone 6 by running the strongest practical test/build/safety validation set and adding any missing lightweight quality checks.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -650,6 +721,12 @@ Next step:
 | 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed | Milestone 4 Android accident contact visibility tests passed. |
 | 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 4 backend jar build passed. |
 | 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 4 Android debug APK build passed. |
+| 2026-05-09 | `.\gradlew.bat :backend:test` | Passed | Milestone 5 full MVP integration and invalid request tests passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | User-facing safety text scan passed. |
+| 2026-05-09 | `docker --version` | Failed | Docker is not installed or not on `PATH`; Compose runtime validation was not possible in this environment. |
+| 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed | Milestone 5 Android unit tests passed. |
+| 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 5 backend jar build passed. |
+| 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 5 Android debug APK build passed. |
 
 ## Known Issues
 

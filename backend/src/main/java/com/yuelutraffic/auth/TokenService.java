@@ -40,16 +40,20 @@ public class TokenService {
         if (parts.length != 2 || !sign(parts[0]).equals(parts[1])) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid bearer token");
         }
-        String payload = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
-        String[] fields = payload.split(":", 2);
-        if (fields.length != 2) {
+        try {
+            String payload = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
+            String[] fields = payload.split(":", 2);
+            if (fields.length != 2) {
+                throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid bearer token payload");
+            }
+            long expiresAt = Long.parseLong(fields[1]);
+            if (Instant.now().getEpochSecond() > expiresAt) {
+                throw new ApiException(HttpStatus.UNAUTHORIZED, "Expired bearer token");
+            }
+            return UUID.fromString(fields[0]);
+        } catch (IllegalArgumentException ex) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid bearer token payload");
         }
-        long expiresAt = Long.parseLong(fields[1]);
-        if (Instant.now().getEpochSecond() > expiresAt) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "Expired bearer token");
-        }
-        return UUID.fromString(fields[0]);
     }
 
     private String sign(String value) {
