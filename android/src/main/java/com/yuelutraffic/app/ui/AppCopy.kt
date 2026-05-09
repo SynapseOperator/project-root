@@ -9,7 +9,7 @@ object AppCopy {
     const val appName = "Yuelu Traffic"
     const val appSubtitle = "中南大学周边路况互助"
     const val demoModeNotice = "当前为本地演示数据，尚未连接实时后端。"
-    const val mapSdkDeferred = "地图为组件化模拟视图；配置地图 SDK 后会优先使用真实地图。"
+    const val mapSdkDeferred = "未配置本机高德地图 Key 时使用模拟地图；配置后优先渲染真实地图。"
     const val lawfulUse = "仅用于共享道路安全与拥堵信息，请遵守交通规则。"
     const val accidentDemoNotice = "事故互助栏已支持后端接入；联系方式仍需双方确认后才显示。"
     const val leaderboardDemoNotice = "排行榜展示应用内代码，不展示学号。"

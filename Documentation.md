@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Full integration phase Milestone 4 complete; ready for Milestone 5 map SDK and release polish
+Full integration phase Milestone 5 complete; ready for Milestone 6 full quality gate
 
 Last updated:
 
@@ -56,8 +56,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 2 - Core P0 Feature 1 | Completed | Accident board list, creation, contact request, and contact confirmation now call backend APIs when online, with local demo fallback and request-id visibility. |
 | Milestone 3 - Core P0 Feature 2 | Completed | Leaderboard now loads backend rankings and profile can refresh backend user data, including points, reputation, title, role, and restriction state. |
 | Milestone 4 - Core P0 Feature 3 | Completed | Android admin panel now loads backend review queue, moderates reports and accidents, and submits user posting restrictions through backend admin APIs. |
-| Milestone 5 - Integration and Error Handling | Next | Add production map SDK provider abstraction, secure local key config, mock fallback, marker rendering, UI polish, icon/splash/privacy setup, and connection guides. |
-| Milestone 6 - Tests and Quality Check | Not started | Run full Gradle/build/text/safety/TODO quality gate and fix failures. |
+| Milestone 5 - Integration and Error Handling | Completed | Added AMap Android 3D SDK dependency, secure local key injection, provider fallback, MapView marker rendering, splash background, local configuration example, and README connection guide. |
+| Milestone 6 - Tests and Quality Check | Next | Run full Gradle/build/text/safety/TODO quality gate and fix failures. |
 | Milestone 7 - Final Documentation and Delivery | Not started | Final README/Documentation updates, acceptance notes, manual checklist, and final validation. |
 
 ### Previous Chinese UI Redesign Phase
@@ -404,6 +404,78 @@ Assumptions:
 Next step:
 
 - Start Milestone 5 by adding production map SDK configuration/provider plumbing, keeping mock map fallback buildable without committed keys.
+
+---
+
+### 2026-05-09 - Full Integration Phase Milestone 5
+
+Date: 2026-05-09
+
+Milestone: Milestone 5 - Integration and Error Handling
+
+Files changed:
+
+- `android/build.gradle`
+- `android/src/main/AndroidManifest.xml`
+- `android/src/main/java/com/yuelutraffic/app/map/MapProviderConfig.kt`
+- `android/src/main/java/com/yuelutraffic/app/map/AmapTrafficMapPanel.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/AppCopy.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/YueluTrafficApp.kt`
+- `android/src/main/res/drawable/splash_background.xml`
+- `android/src/main/res/values/styles.xml`
+- `android/src/test/java/com/yuelutraffic/app/map/MapProviderConfigTest.kt`
+- `local.properties.example`
+- `README.md`
+- `Documentation.md`
+
+Work completed:
+
+- Added the AMap Android 3D map SDK dependency and lifecycle-aware Compose `MapView` bridge.
+- Added local-only AMap key configuration through `local.properties` or `YUELU_AMAP_API_KEY`.
+- Added a force-mock switch so CI and credential-free local builds can keep using the mock map.
+- Added marker rendering for active traffic reports on the SDK map and preserved report detail selection from markers.
+- Added AMap privacy initialization calls before creating the SDK map.
+- Added a branded launch background and updated README instructions for backend URL, physical device, and map key configuration.
+- Added map provider configuration unit tests.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+
+Results:
+
+- Android unit tests passed, including map provider configuration tests.
+- Android debug APK build passed with the AMap native library packaged.
+- Backend tests passed; backend code was not changed.
+- Android Chinese text scan passed.
+- Safety text scan passed.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Use `com.amap.api:3dmap:10.0.600` because Maven Central currently lists it as the latest standalone `3dmap` artifact.
+- Keep the mock Compose map as the default when no local key is configured or when `yuelu.forceMockMap=true`.
+- Do not commit a real AMap key; Android keys must be injected locally and restricted by package name plus signing SHA-1 in the AMap console.
+
+Assumptions:
+
+- AMap rendering still needs emulator or physical-device validation with a valid Android platform key.
+- The app privacy page and startup flow satisfy the local requirement to call AMap privacy status APIs before SDK map initialization.
+
+Next step:
+
+- Start Milestone 6 by running the full quality gate and fixing any failures.
 
 ---
 
@@ -1779,6 +1851,7 @@ Next step:
 | 2026-05-09 | Start a new milestone sequence for the full integration and release-preparation prompt. | The root `Prompt.md` now defines a materially larger phase than the completed Chinese UI redesign work. |
 | 2026-05-09 | Use SharedPreferences for first-pass Android session persistence. | It satisfies persistent login/logout without introducing additional dependencies; the backend still validates the token on app start. |
 | 2026-05-09 | Keep Android admin restriction actions to a fixed 24-hour duration for the first backend-connected UI. | This avoids adding a larger admin policy editor while still exercising the backend restriction workflow safely. |
+| 2026-05-09 | Keep the AMap SDK provider disabled unless a local key is configured. | This satisfies production SDK integration without making CI or local validation depend on committed credentials. |
 
 ## Assumptions
 
@@ -1797,6 +1870,11 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Full integration Milestone 5 Android tests passed, including map provider config coverage. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 5 Android debug APK build passed with AMap SDK packaged; Gradle warned that `libAMapSDK_MAP_v10_0_600.so` could not be stripped and was packaged as-is. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests passed; backend code was unchanged in Milestone 5. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Android Chinese text scan passed after map SDK wiring and README updates. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed after map SDK wiring and README updates. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Full integration Milestone 4 Android tests passed, including admin request/response adapter coverage. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 4 Android debug APK build passed after admin backend wiring. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend admin tests still passed; no backend code changed in Milestone 4. |
@@ -1909,7 +1987,7 @@ Next step:
 | `Prompt.md` is not filled with a concrete project yet. | Medium | Resolved | `Prompt.md` now defines Yuelu Traffic requirements. |
 | GitHub remote is not configured. | Low | Resolved | `origin` is configured as `https://github.com/SynapseOperator/project-root.git`. |
 | Android UI is not yet connected to backend APIs. | High | Resolved for current P0 | Login, `/me`, traffic reports, accident board, leaderboard/profile, and Android admin workflows are now backend-connected for online sessions. |
-| Production AMap SDK view is not integrated. | High | Open | This is now active P0 scope, with key injection through local configuration and mock fallback required. |
+| Production AMap SDK view is not integrated. | High | Implemented, manual validation pending | AMap Android 3D SDK dependency, local key injection, provider selection, MapView bridge, markers, and mock fallback are implemented. Device validation with a valid key is still required. |
 | Accident board, leaderboard, and admin backend integration are not implemented. | Medium | Resolved for current P0 | Accident board, leaderboard/profile, and admin review/moderation/restriction workflows now call backend APIs in online sessions. |
 | Android emulator or physical-device workflow validation was not run. | Medium | Open | No running Android device was available; validation used JVM tests, Android lint, and debug APK build. |
 | Docker Compose runtime validation was not run. | Medium | Open | Docker is not installed or not on `PATH` in this environment. |

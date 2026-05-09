@@ -2,7 +2,7 @@
 
 Yuelu Traffic is an Android and Spring Boot project for crowdsourced traffic safety and road-condition reporting around Central South University and Lushan South Road.
 
-The current Android app is a Simplified Chinese, map-first Compose experience. Core traffic workflows now connect to the backend: student-number login, current user session, traffic report list, report creation, report detail refresh, and report feedback. Accident board, leaderboard, and admin surfaces remain local/demo in this phase and are labeled that way in the app.
+The current Android app is a Simplified Chinese, map-first Compose experience. Core workflows now connect to the backend: student-number login, persisted current user session, traffic reports, accident board contact exchange, leaderboard/profile refresh, and Android admin review/moderation/restriction. The map page can use the AMap Android 3D map SDK when a local key is configured, and falls back to the credential-free Compose mock map when no key is present.
 
 ## Repository Layout
 
@@ -19,14 +19,15 @@ The current Android app is a Simplified Chinese, map-first Compose experience. C
 - Chinese login screen with privacy acknowledgement.
 - Backend-connected login through `/api/v1/auth/student`.
 - Backend-connected current user refresh through `/api/v1/me`.
-- Map-first home page with a polished credential-free Compose mock map.
+- Map-first home page with AMap Android 3D SDK support and a credential-free Compose mock fallback.
 - Chinese bottom navigation: 地图, 上报, 事故栏, 我的.
 - Backend-connected traffic report list, detail refresh, creation, and feedback.
 - Clear Chinese backend-unavailable and local-demo states.
-- Local/demo accident board with mutual contact confirmation copy.
-- Local/demo profile, leaderboard, and admin panel with visible scope boundaries.
+- Backend-connected accident board with mutual contact request and confirmation.
+- Backend-connected profile refresh and public-code-only leaderboard.
+- Backend-connected Android admin panel for review queue, moderation, and posting restrictions.
 
-The production map SDK is intentionally deferred. The app builds without map credentials.
+The app builds without map credentials. Configure the local AMap key only in `local.properties` or `YUELU_AMAP_API_KEY`; do not commit raw SDK keys.
 
 ## Prerequisites
 
@@ -96,6 +97,23 @@ http://10.0.2.2:8080
 ```
 
 That address lets an Android emulator reach the backend running on the host machine. A physical device may need a LAN IP or a different `API_BASE_URL` build configuration.
+
+For local Android configuration, copy `local.properties.example` to `local.properties` and adjust values:
+
+```properties
+yuelu.apiBaseUrl=http://10.0.2.2:8080
+yuelu.amapApiKey=
+yuelu.forceMockMap=false
+```
+
+Backend URL can also be supplied with `YUELU_API_BASE_URL`. The AMap SDK key can also be supplied with `YUELU_AMAP_API_KEY`. Set `yuelu.forceMockMap=true` or `YUELU_FORCE_MOCK_MAP=true` to force the mock map even when a key is configured.
+
+AMap key setup checklist:
+
+- Create an Android platform key in the AMap console.
+- Bind it to package `com.yuelutraffic.app` and the debug/release signing SHA-1 values you intend to use.
+- Store the key in `local.properties` or `YUELU_AMAP_API_KEY`.
+- Keep the mock map enabled for CI or credential-free validation.
 
 Manual emulator or phone validation was not available in the latest local run because `adb devices` reported no connected devices.
 
@@ -169,8 +187,7 @@ The Compose stack starts PostgreSQL and the backend. Flyway migrations run at ba
 
 ## Known Limitations
 
-- Production map SDK integration is deferred; the current Android map is a credential-free Compose mock map.
-- Accident board, leaderboard, and admin backend integration are deferred from this phase's P0 scope.
+- AMap rendering still needs manual verification on an emulator or phone with a valid AMap Android key.
 - Android emulator or physical-device manual testing was not available in the latest validation run.
 - Docker is not installed in the current environment, so `docker compose up --build` was documented but not locally executed.
 - Contact values are protected from public APIs, but production-grade field encryption should be added before real deployment.

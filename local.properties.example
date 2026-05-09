@@ -1,0 +1,15 @@
+# Copy this file to local.properties for local-only Android configuration.
+# Do not commit local.properties; it may contain machine paths or SDK keys.
+
+# Android Gradle may also write sdk.dir here.
+# sdk.dir=C:\\Users\\you\\AppData\\Local\\Android\\Sdk
+
+# Android emulator can reach a backend running on the host at 10.0.2.2.
+yuelu.apiBaseUrl=http://10.0.2.2:8080
+
+# Production map provider. Leave empty to keep the app on the mock map.
+# Restrict the real key in the AMap console by package name and SHA-1.
+yuelu.amapApiKey=
+
+# Set true to force the mock map even when a local AMap key is configured.
+yuelu.forceMockMap=false

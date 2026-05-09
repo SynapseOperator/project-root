@@ -68,6 +68,9 @@ import com.yuelutraffic.app.auth.PRIVACY_NOTICE
 import com.yuelutraffic.app.auth.publicCodeForStudentNumber
 import com.yuelutraffic.app.config.isSupportedBackendBaseUrl
 import com.yuelutraffic.app.config.normalizeBackendBaseUrl
+import com.yuelutraffic.app.map.AmapTrafficMapPanel
+import com.yuelutraffic.app.map.MapProviderMode
+import com.yuelutraffic.app.map.currentMapProviderRuntimeConfig
 import com.yuelutraffic.app.network.ApiResult
 import com.yuelutraffic.app.network.BackendAuthSession
 import com.yuelutraffic.app.network.BackendUserProfile
@@ -822,6 +825,7 @@ private fun MapHomeScreen(
     onFeedback: (String, FeedbackChoice) -> Unit,
     contentPadding: PaddingValues,
 ) {
+    val mapProviderConfig = remember { currentMapProviderRuntimeConfig() }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -836,7 +840,7 @@ private fun MapHomeScreen(
         item {
             StatusNotice(
                 title = if (session.isDemoMode) "演示模式" else if (isReportLoading) "正在同步" else "后端路况",
-                body = "${session.connectionMessage} $reportStatusMessage",
+                body = "${session.connectionMessage} $reportStatusMessage ${mapProviderConfig.statusMessage}",
             )
         }
         item {
@@ -845,7 +849,16 @@ private fun MapHomeScreen(
             }
         }
         item {
-            MockMapPanel(reports = reports, onSelectReport = onSelectReport)
+            if (mapProviderConfig.mode == MapProviderMode.AMAP) {
+                AmapTrafficMapPanel(
+                    reports = reports,
+                    apiKey = mapProviderConfig.amapApiKey,
+                    statusMessage = mapProviderConfig.statusMessage,
+                    onSelectReport = onSelectReport,
+                )
+            } else {
+                MockMapPanel(reports = reports, onSelectReport = onSelectReport)
+            }
         }
         item {
             ReportFeed(reports = reports, onSelectReport = onSelectReport, onFeedback = onFeedback)

@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.YueluTraffic" parent="android:style/Theme.Material.Light.NoActionBar" />
+    <style name="Theme.YueluTraffic" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:statusBarColor">#1F7A4D</item>
+        <item name="android:navigationBarColor">#F7FAF7</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>
