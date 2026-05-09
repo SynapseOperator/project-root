@@ -22,6 +22,7 @@ data class AccidentPostUi(
     val occurredAt: Instant,
     val status: AccidentPostStatus = AccidentPostStatus.OPEN,
     val contactExchangeStatus: ContactExchangeStatus = ContactExchangeStatus.NONE,
+    val contactRequestId: String? = null,
     val visibleContacts: List<String> = emptyList(),
 )
 
@@ -37,8 +38,12 @@ fun createAccidentPost(
     )
 }
 
-fun AccidentPostUi.requestContact(): AccidentPostUi {
-    return copy(contactExchangeStatus = ContactExchangeStatus.PENDING, visibleContacts = emptyList())
+fun AccidentPostUi.requestContact(requestId: String? = contactRequestId): AccidentPostUi {
+    return copy(
+        contactExchangeStatus = ContactExchangeStatus.PENDING,
+        contactRequestId = requestId,
+        visibleContacts = emptyList(),
+    )
 }
 
 fun AccidentPostUi.confirmContact(otherSideContact: String): AccidentPostUi {

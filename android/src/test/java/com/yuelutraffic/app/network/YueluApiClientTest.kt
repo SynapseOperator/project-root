@@ -6,6 +6,8 @@ import org.junit.Test
 import com.yuelutraffic.app.traffic.FeedbackChoice
 import com.yuelutraffic.app.traffic.TrafficReportStatus
 import com.yuelutraffic.app.traffic.TrafficReportType
+import com.yuelutraffic.app.accidents.AccidentPostStatus
+import com.yuelutraffic.app.accidents.ContactExchangeStatus
 
 class YueluApiClientTest {
 
@@ -87,5 +89,55 @@ class YueluApiClientTest {
         assertEquals(TrafficReportType.CONSTRUCTION, reports.first().type)
         assertEquals(TrafficReportStatus.ACTIVE, reports.first().status)
         assertEquals(58, reports.first().confidenceScore)
+    }
+
+    @Test
+    fun accidentRequestBodiesMatchBackendContract() {
+        val createBody = createAccidentRequestBody(
+            locationLabel = " 麓山南路 ",
+            description = " 轻微事故\\等待确认 ",
+        )
+
+        assertTrue(createBody.contains("\"locationLabel\":\"麓山南路\""))
+        assertTrue(createBody.contains("\"description\":\"轻微事故\\\\等待确认\""))
+        assertEquals(
+            "{\"contactType\":\"WECHAT\",\"contactValue\":\"wx-123\"}",
+            contactOfferRequestBody(" wx-123 "),
+        )
+    }
+
+    @Test
+    fun accidentAndContactParsersReadBackendShape() {
+        val accidents = parseAccidents(
+            """
+            [
+              {
+                "id": "33333333-3333-3333-3333-333333333333",
+                "latitude": 28.17,
+                "longitude": 112.93,
+                "locationLabel": "麓山南路",
+                "occurredAt": "2026-05-09T08:00:00Z",
+                "description": "轻微事故",
+                "status": "OPEN"
+              }
+            ]
+            """.trimIndent(),
+        )
+        val exchange = parseContactExchange(
+            """
+            {
+              "id": "44444444-4444-4444-4444-444444444444",
+              "accidentId": "33333333-3333-3333-3333-333333333333",
+              "status": "MUTUALLY_CONFIRMED",
+              "visibleContacts": [
+                {"publicCode":"User-A","contactType":"WECHAT","contactValue":"wx-a"}
+              ]
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(AccidentPostStatus.OPEN, accidents.first().status)
+        assertEquals(ContactExchangeStatus.MUTUALLY_CONFIRMED, exchange.status)
+        assertEquals(1, exchange.visibleContacts.size)
     }
 }

@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Full integration phase Milestone 1 complete; ready for Milestone 2 accident board backend integration
+Full integration phase Milestone 2 complete; ready for Milestone 3 leaderboard and profile backend integration
 
 Last updated:
 
@@ -53,8 +53,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 |---|---|---|
 | Milestone 0 - Project Understanding and Setup | Completed | Active `Prompt.md` defines full Android backend integration, persistent session/logout, configurable backend URLs, production map SDK with mock fallback, and release-preparation scope. Previous active prompt is archived under `docs/prompts/2026-05-09-yuelu-traffic-chinese-ui-redesign.md`. |
 | Milestone 1 - Minimal Running Skeleton | Completed | Added configurable backend base URL, persisted token/user/base URL storage, session restoration, logout, backend status/debug surface, privacy/safety page, and launcher icon baseline. |
-| Milestone 2 - Core P0 Feature 1 | Next | Connect accident board list/create/contact request/contact confirmation to backend. |
-| Milestone 3 - Core P0 Feature 2 | Not started | Connect leaderboard/profile to backend user and ranking data, including restriction state. |
+| Milestone 2 - Core P0 Feature 1 | Completed | Accident board list, creation, contact request, and contact confirmation now call backend APIs when online, with local demo fallback and request-id visibility. |
+| Milestone 3 - Core P0 Feature 2 | Next | Connect leaderboard/profile to backend user and ranking data, including restriction state. |
 | Milestone 4 - Core P0 Feature 3 | Not started | Connect Android admin review, report moderation, accident moderation, and user restriction actions to backend. |
 | Milestone 5 - Integration and Error Handling | Not started | Add production map SDK provider abstraction, secure local key config, mock fallback, marker rendering, UI polish, icon/splash/privacy setup, and connection guides. |
 | Milestone 6 - Tests and Quality Check | Not started | Run full Gradle/build/text/safety/TODO quality gate and fix failures. |
@@ -219,6 +219,68 @@ Assumptions:
 Next step:
 
 - Start Milestone 2 by connecting accident list, accident creation, contact request, and contact confirmation to backend APIs.
+
+---
+
+### 2026-05-09 - Full Integration Phase Milestone 2
+
+Date: 2026-05-09
+
+Milestone: Milestone 2 - Core P0 Feature 1
+
+Files changed:
+
+- `android/src/main/java/com/yuelutraffic/app/accidents/AccidentModels.kt`
+- `android/src/main/java/com/yuelutraffic/app/network/YueluApiClient.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/YueluTrafficApp.kt`
+- `android/src/test/java/com/yuelutraffic/app/network/YueluApiClientTest.kt`
+- `Documentation.md`
+
+Work completed:
+
+- Added Android backend API methods for accident list, accident creation, contact request creation, and contact request confirmation.
+- Added Android parsing for backend `AccidentResponse` and `ContactExchangeResponse`.
+- Extended Android accident UI state with backend contact request ids and visible confirmed contacts.
+- Connected the accident board to backend list/create/request/confirm calls in online sessions.
+- Preserved explicit local demo behavior when the app is in demo mode or backend calls fail.
+- Added JVM adapter tests for accident request body generation and backend response parsing.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+
+Results:
+
+- Android unit tests passed, including accident backend adapter tests.
+- Android debug APK build passed.
+- Backend tests passed; existing accident API tests still validate hidden contacts and mutual confirmation.
+- Android Chinese text scan passed.
+- Safety text scan passed.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Show backend contact request ids in the accident card after a request is created, because the current backend confirmation API requires a contact request id.
+- Keep contact confirmation button wired to the backend even though a real successful confirmation requires a different user than the requester.
+
+Assumptions:
+
+- The existing backend contact-exchange protection model is acceptable for P0; production-grade encryption remains P1 per `Prompt.md`.
+
+Next step:
+
+- Start Milestone 3 by connecting leaderboard and profile surfaces to backend user/ranking data.
 
 ---
 
@@ -1611,6 +1673,11 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Full integration Milestone 2 Android tests passed, including accident API adapter tests. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 2 Android debug APK build passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests passed, including accident contact privacy tests. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Android Chinese text scan passed after accident backend wiring. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed after accident backend wiring. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Full integration Milestone 1 Android tests passed, including backend URL config tests. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 1 Android debug APK build passed with launcher icon resources. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests passed; backend code was unchanged in Milestone 1. |
@@ -1709,7 +1776,7 @@ Next step:
 | GitHub remote is not configured. | Low | Resolved | `origin` is configured as `https://github.com/SynapseOperator/project-root.git`. |
 | Android UI is not yet connected to backend APIs. | High | Resolved for current P0 | Login, `/me`, traffic report list, traffic report creation, detail refresh, and feedback are backend-connected; accident/admin/leaderboard backend connection remains deferred by the active prompt. |
 | Production AMap SDK view is not integrated. | High | Open | This is now active P0 scope, with key injection through local configuration and mock fallback required. |
-| Accident board, leaderboard, and admin backend integration are not implemented. | Medium | Open | These are now active P0 scope in root `Prompt.md`. |
+| Accident board, leaderboard, and admin backend integration are not implemented. | Medium | Partially resolved | Accident board list/create/contact request/contact confirmation are now backend-connected; leaderboard and admin remain active P0 work. |
 | Android emulator or physical-device workflow validation was not run. | Medium | Open | No running Android device was available; validation used JVM tests, Android lint, and debug APK build. |
 | Docker Compose runtime validation was not run. | Medium | Open | Docker is not installed or not on `PATH` in this environment. |
 | Accident contact storage needs production-grade encryption. | High | Open | Contact values are hidden from public APIs and encoded internally, but real field encryption is still required before deployment. |

@@ -318,8 +318,13 @@ private fun MainShell(
     var selectedReport by remember { mutableStateOf<TrafficReportUi?>(null) }
     var isReportLoading by rememberSaveable { mutableStateOf(false) }
     var isReportSubmitting by rememberSaveable { mutableStateOf(false) }
+    var isAccidentLoading by rememberSaveable { mutableStateOf(false) }
+    var isAccidentSubmitting by rememberSaveable { mutableStateOf(false) }
     var reportStatusMessage by rememberSaveable {
         mutableStateOf(if (session.isDemoMode) "当前显示本地演示路况，未连接后端列表。" else "正在从后端加载麓山南路附近路况。")
+    }
+    var accidentStatusMessage by rememberSaveable {
+        mutableStateOf(if (session.isDemoMode) "当前显示本地演示互助信息，未连接后端事故栏。" else "正在从后端加载事故互助信息。")
     }
 
     fun replaceReport(updated: TrafficReportUi) {
@@ -409,8 +414,115 @@ private fun MainShell(
         }
     }
 
+    fun replaceAccident(updated: AccidentPostUi) {
+        val index = accidents.indexOfFirst { it.id == updated.id }
+        if (index >= 0) accidents[index] = updated else accidents.add(0, updated)
+    }
+
+    fun updateAccidentExchange(exchange: com.yuelutraffic.app.network.BackendContactExchange) {
+        val index = accidents.indexOfFirst { it.id == exchange.accidentId }
+        if (index >= 0) {
+            accidents[index] = accidents[index].copy(
+                status = if (exchange.status == ContactExchangeStatus.MUTUALLY_CONFIRMED) {
+                    AccidentPostStatus.MATCHED
+                } else {
+                    accidents[index].status
+                },
+                contactExchangeStatus = exchange.status,
+                contactRequestId = exchange.id,
+                visibleContacts = exchange.visibleContacts,
+            )
+        }
+    }
+
+    fun loadBackendAccidents() {
+        if (session.isDemoMode) {
+            accidentStatusMessage = "当前显示本地演示互助信息，未连接后端事故栏。"
+            return
+        }
+        isAccidentLoading = true
+        accidentStatusMessage = "正在同步后端事故栏。"
+        apiClient.listAccidents { result ->
+            isAccidentLoading = false
+            when (result) {
+                is ApiResult.Success -> {
+                    accidents.clear()
+                    accidents.addAll(result.value)
+                    accidentStatusMessage = "已从后端加载 ${result.value.size} 条事故互助信息。"
+                }
+                is ApiResult.Failure -> {
+                    if (accidents.isEmpty()) accidents.addAll(sampleAccidentPosts())
+                    accidentStatusMessage = "事故栏加载失败：${result.message} 当前显示本地演示信息。"
+                }
+            }
+        }
+    }
+
+    fun submitAccident(locationLabel: String, description: String) {
+        if (session.isDemoMode || session.accessToken == null) {
+            accidents.add(0, createAccidentPost(locationLabel, description))
+            accidentStatusMessage = "本地演示事故互助已添加，未同步到后端。"
+            return
+        }
+        isAccidentSubmitting = true
+        accidentStatusMessage = "正在提交事故互助到后端。"
+        apiClient.createAccident(session.accessToken, locationLabel, description) { result ->
+            isAccidentSubmitting = false
+            when (result) {
+                is ApiResult.Success -> {
+                    replaceAccident(result.value)
+                    accidentStatusMessage = "事故互助已提交到后端。"
+                }
+                is ApiResult.Failure -> accidentStatusMessage = "事故互助提交失败：${result.message}"
+            }
+        }
+    }
+
+    fun requestAccidentContact(accidentId: String, contactValue: String) {
+        if (session.isDemoMode || session.accessToken == null) {
+            val index = accidents.indexOfFirst { it.id == accidentId }
+            if (index >= 0) accidents[index] = accidents[index].requestContact()
+            accidentStatusMessage = "本地演示联系方式申请已记录，未同步到后端。"
+            return
+        }
+        apiClient.requestAccidentContact(session.accessToken, accidentId, contactValue) { result ->
+            when (result) {
+                is ApiResult.Success -> {
+                    updateAccidentExchange(result.value)
+                    accidentStatusMessage = "联系方式申请已提交后端；请等待另一方确认。请求 ID：${result.value.id}"
+                }
+                is ApiResult.Failure -> accidentStatusMessage = "联系方式申请失败：${result.message}"
+            }
+        }
+    }
+
+    fun confirmAccidentContact(requestId: String?, contactValue: String) {
+        if (requestId == null) {
+            accidentStatusMessage = "请先申请联系方式，或输入已有请求后再确认。"
+            return
+        }
+        if (session.isDemoMode || session.accessToken == null) {
+            val index = accidents.indexOfFirst { it.contactRequestId == requestId }
+            if (index >= 0) accidents[index] = accidents[index].confirmContact(contactValue)
+            accidentStatusMessage = "本地演示双方确认已完成，未同步到后端。"
+            return
+        }
+        apiClient.confirmAccidentContact(session.accessToken, requestId, contactValue) { result ->
+            when (result) {
+                is ApiResult.Success -> {
+                    updateAccidentExchange(result.value)
+                    accidentStatusMessage = "双方联系方式确认已同步到后端。"
+                }
+                is ApiResult.Failure -> accidentStatusMessage = "联系方式确认失败：${result.message}"
+            }
+        }
+    }
+
     LaunchedEffect(session.accessToken, session.isDemoMode) {
-        if (!session.isDemoMode) loadBackendReports()
+        if (!session.isDemoMode) {
+            loadBackendReports()
+            loadBackendAccidents()
+        }
     }
 
     Scaffold(
@@ -448,12 +560,15 @@ private fun MainShell(
                 contentPadding = innerPadding,
             )
             MainTab.Accidents -> AccidentBoardScreen(
+                statusMessage = accidentStatusMessage,
+                isLoading = isAccidentLoading,
+                isSubmitting = isAccidentSubmitting,
+                isBackendMode = !session.isDemoMode,
                 accidents = accidents,
-                onAdd = { accidents.add(0, it) },
-                onUpdate = { updated ->
-                    val index = accidents.indexOfFirst { it.id == updated.id }
-                    if (index >= 0) accidents[index] = updated
-                },
+                onRefresh = ::loadBackendAccidents,
+                onSubmit = ::submitAccident,
+                onRequestContact = ::requestAccidentContact,
+                onConfirmContact = ::confirmAccidentContact,
                 contentPadding = innerPadding,
             )
             MainTab.Profile -> ProfileScreen(
@@ -597,9 +712,15 @@ private fun SubmitReportScreen(
 
 @Composable
 private fun AccidentBoardScreen(
+    statusMessage: String,
+    isLoading: Boolean,
+    isSubmitting: Boolean,
+    isBackendMode: Boolean,
     accidents: List<AccidentPostUi>,
-    onAdd: (AccidentPostUi) -> Unit,
-    onUpdate: (AccidentPostUi) -> Unit,
+    onRefresh: () -> Unit,
+    onSubmit: (String, String) -> Unit,
+    onRequestContact: (String, String) -> Unit,
+    onConfirmContact: (String?, String) -> Unit,
     contentPadding: PaddingValues,
 ) {
     var locationLabel by rememberSaveable { mutableStateOf("麓山南路中南大学门口") }
@@ -615,7 +736,17 @@ private fun AccidentBoardScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { AppHeader(title = "事故互助栏", subtitle = "联系方式默认隐藏，双方确认后才显示", badge = "隐私优先") }
-        item { StatusNotice(title = "互助提醒", body = AppCopy.accidentDemoNotice) }
+        item {
+            StatusNotice(
+                title = if (isBackendMode) "后端事故栏" else "演示事故栏",
+                body = "$statusMessage ${AppCopy.accidentDemoNotice}",
+            )
+        }
+        item {
+            OutlinedButton(enabled = !isLoading, onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
+                Text(if (isLoading) "正在刷新事故栏" else "刷新事故栏")
+            }
+        }
         item {
             ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -635,12 +766,13 @@ private fun AccidentBoardScreen(
                     )
                     Button(
                         onClick = {
-                            onAdd(createAccidentPost(locationLabel, description.ifBlank { "轻微事故，等待互助确认。" }))
+                            onSubmit(locationLabel, description.ifBlank { "轻微事故，等待互助确认。" })
                             description = ""
                         },
+                        enabled = !isSubmitting,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("发布互助信息")
+                        Text(if (isSubmitting) "正在发布" else if (isBackendMode) "发布到后端" else "发布演示信息")
                     }
                 }
             }
@@ -650,7 +782,8 @@ private fun AccidentBoardScreen(
                 accident = accident,
                 contactValue = contactValue,
                 onContactChange = { contactValue = it },
-                onUpdate = onUpdate,
+                onRequestContact = { onRequestContact(accident.id, contactValue) },
+                onConfirmContact = { onConfirmContact(accident.contactRequestId, contactValue) },
             )
         }
     }
@@ -945,7 +1078,8 @@ private fun AccidentCard(
     accident: AccidentPostUi,
     contactValue: String,
     onContactChange: (String) -> Unit,
-    onUpdate: (AccidentPostUi) -> Unit,
+    onRequestContact: () -> Unit,
+    onConfirmContact: () -> Unit,
 ) {
     ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -956,6 +1090,13 @@ private fun AccidentCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = YueluColors.InkMuted,
             )
+            if (accident.contactRequestId != null) {
+                Text(
+                    text = "联系方式请求 ID：${accident.contactRequestId}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = YueluColors.InkMuted,
+                )
+            }
             OutlinedTextField(
                 value = contactValue,
                 onValueChange = onContactChange,
@@ -966,13 +1107,13 @@ private fun AccidentCard(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     enabled = accident.contactExchangeStatus == ContactExchangeStatus.NONE,
-                    onClick = { onUpdate(accident.requestContact()) },
+                    onClick = onRequestContact,
                 ) {
                     Text("申请交换")
                 }
                 OutlinedButton(
                     enabled = accident.contactExchangeStatus == ContactExchangeStatus.PENDING,
-                    onClick = { onUpdate(accident.confirmContact(contactValue)) },
+                    onClick = onConfirmContact,
                 ) {
                     Text("双方确认")
                 }

@@ -3,6 +3,9 @@ package com.yuelutraffic.app.network
 import android.os.Handler
 import android.os.Looper
 import com.yuelutraffic.app.BuildConfig
+import com.yuelutraffic.app.accidents.AccidentPostStatus
+import com.yuelutraffic.app.accidents.AccidentPostUi
+import com.yuelutraffic.app.accidents.ContactExchangeStatus
 import com.yuelutraffic.app.config.normalizeBackendBaseUrl
 import com.yuelutraffic.app.traffic.FeedbackChoice
 import com.yuelutraffic.app.traffic.TrafficReportStatus
@@ -41,6 +44,13 @@ data class BackendAuthSession(
     val user: BackendUserProfile,
     val newUser: Boolean,
     val privacyNotice: String,
+)
+
+data class BackendContactExchange(
+    val id: String,
+    val accidentId: String,
+    val status: ContactExchangeStatus,
+    val visibleContacts: List<String>,
 )
 
 class YueluApiClient(
@@ -107,6 +117,68 @@ class YueluApiClient(
                 postJson(
                     path = "/api/v1/reports/$reportId/feedback",
                     body = feedbackRequestBody(choice),
+                    accessToken = accessToken,
+                ),
+            )
+        }
+    }
+
+    fun listAccidents(callback: (ApiResult<List<AccidentPostUi>>) -> Unit) {
+        execute(callback) {
+            parseAccidents(
+                getJson(
+                    path = "/api/v1/accidents?minLat=28.1200&minLng=112.8800&maxLat=28.2200&maxLng=113.0000",
+                    accessToken = null,
+                ),
+            )
+        }
+    }
+
+    fun createAccident(
+        accessToken: String,
+        locationLabel: String,
+        description: String,
+        callback: (ApiResult<AccidentPostUi>) -> Unit,
+    ) {
+        execute(callback) {
+            parseAccident(
+                postJson(
+                    path = "/api/v1/accidents",
+                    body = createAccidentRequestBody(locationLabel, description),
+                    accessToken = accessToken,
+                ),
+            )
+        }
+    }
+
+    fun requestAccidentContact(
+        accessToken: String,
+        accidentId: String,
+        contactValue: String,
+        callback: (ApiResult<BackendContactExchange>) -> Unit,
+    ) {
+        execute(callback) {
+            parseContactExchange(
+                postJson(
+                    path = "/api/v1/accidents/$accidentId/contact-requests",
+                    body = contactOfferRequestBody(contactValue),
+                    accessToken = accessToken,
+                ),
+            )
+        }
+    }
+
+    fun confirmAccidentContact(
+        accessToken: String,
+        requestId: String,
+        contactValue: String,
+        callback: (ApiResult<BackendContactExchange>) -> Unit,
+    ) {
+        execute(callback) {
+            parseContactExchange(
+                postJson(
+                    path = "/api/v1/contact-requests/$requestId/confirm",
+                    body = contactOfferRequestBody(contactValue),
                     accessToken = accessToken,
                 ),
             )
@@ -210,6 +282,21 @@ internal fun feedbackRequestBody(choice: FeedbackChoice): String {
     return "{\"feedbackType\":\"${choice.name}\"}"
 }
 
+internal fun createAccidentRequestBody(locationLabel: String, description: String): String {
+    return buildString {
+        append("{")
+        append("\"latitude\":28.1703,")
+        append("\"longitude\":112.9388,")
+        append("\"locationLabel\":\"").append(escapeJson(locationLabel.trim())).append("\",")
+        append("\"description\":\"").append(escapeJson(description.trim())).append("\"")
+        append("}")
+    }
+}
+
+internal fun contactOfferRequestBody(contactValue: String, contactType: String = "WECHAT"): String {
+    return "{\"contactType\":\"$contactType\",\"contactValue\":\"${escapeJson(contactValue.trim())}\"}"
+}
+
 internal fun parseAuthSession(json: String): BackendAuthSession {
     val root = JSONObject(json)
     return BackendAuthSession(
@@ -233,6 +320,35 @@ internal fun parseTrafficReports(json: String): List<TrafficReportUi> {
 
 internal fun parseTrafficReport(json: String): TrafficReportUi {
     return parseTrafficReport(JSONObject(json))
+}
+
+internal fun parseAccidents(json: String): List<AccidentPostUi> {
+    val array = JSONArray(json)
+    return List(array.length()) { index ->
+        parseAccident(array.getJSONObject(index))
+    }
+}
+
+internal fun parseAccident(json: String): AccidentPostUi {
+    return parseAccident(JSONObject(json))
+}
+
+internal fun parseContactExchange(json: String): BackendContactExchange {
+    val root = JSONObject(json)
+    val visibleContacts = root.optJSONArray("visibleContacts")
+    return BackendContactExchange(
+        id = root.optString("id"),
+        accidentId = root.optString("accidentId"),
+        status = contactExchangeStatusFromApi(root.optString("status")),
+        visibleContacts = if (visibleContacts == null) {
+            emptyList()
+        } else {
+            List(visibleContacts.length()) { index ->
+                val contact = visibleContacts.getJSONObject(index)
+                "${contact.optString("publicCode")} · ${contact.optString("contactType")} · ${contact.optString("contactValue")}"
+            }
+        },
+    )
 }
 
 private fun parseUserProfile(json: JSONObject): BackendUserProfile {
@@ -262,12 +378,30 @@ private fun parseTrafficReport(json: JSONObject): TrafficReportUi {
     )
 }
 
+private fun parseAccident(json: JSONObject): AccidentPostUi {
+    return AccidentPostUi(
+        id = json.optString("id"),
+        locationLabel = json.optString("locationLabel", "麓山南路"),
+        description = json.optString("description"),
+        occurredAt = parseInstantOrNow(json.optString("occurredAt")),
+        status = accidentStatusFromApi(json.optString("status")),
+    )
+}
+
 private fun reportTypeFromApi(value: String): TrafficReportType {
     return TrafficReportType.entries.firstOrNull { it.name == value } ?: TrafficReportType.CONGESTION
 }
 
 private fun reportStatusFromApi(value: String): TrafficReportStatus {
     return TrafficReportStatus.entries.firstOrNull { it.name == value } ?: TrafficReportStatus.UNDER_REVIEW
+}
+
+private fun accidentStatusFromApi(value: String): AccidentPostStatus {
+    return AccidentPostStatus.entries.firstOrNull { it.name == value } ?: AccidentPostStatus.OPEN
+}
+
+private fun contactExchangeStatusFromApi(value: String): ContactExchangeStatus {
+    return ContactExchangeStatus.entries.firstOrNull { it.name == value } ?: ContactExchangeStatus.NONE
 }
 
 private fun parseInstantOrNow(value: String): Instant {
