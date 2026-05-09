@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Milestone 2 complete; ready for Milestone 3 core P0 feature 2
+Milestone 3 complete; ready for Milestone 4 core P0 feature 3
 
 Last updated:
 
@@ -52,8 +52,8 @@ This stack keeps the Android client native, keeps the backend conservative and d
 | Milestone 0 — Project Understanding and Setup | Completed | Technical stack, architecture, module boundaries, data model draft, API draft, and validation strategy recorded in `docs/Architecture.md`. |
 | Milestone 1 — Minimal Running Skeleton | Completed | Root Gradle multi-project, Spring Boot health endpoint, Compose Android startup screen, wrapper, README run instructions, and validation commands are in place. |
 | Milestone 2 — Core P0 Feature 1 | Completed | Implemented student-number login with privacy acknowledgement, backend hashing, bearer token, `/me`, public leaderboard redaction, Android privacy entry screen, and tests. |
-| Milestone 3 — Core P0 Feature 2 | Next | Implement traffic reports, map marker data, default expiration, feedback, confidence, reputation, points, and leaderboard updates. |
-| Milestone 4 — Core P0 Feature 3 | Not started | |
+| Milestone 3 — Core P0 Feature 2 | Completed | Implemented traffic report APIs, pilot-area validation, default expiration, feedback, confidence scoring, reputation/points events, Android map-style report UI, submission, feedback, and tests. |
+| Milestone 4 — Core P0 Feature 3 | Next | Implement accident board, mutual contact exchange, admin moderation, abuse/restriction workflows, and remaining persistence. |
 | Milestone 5 — Integration and Error Handling | Not started | |
 | Milestone 6 — Tests and Quality Check | Not started | |
 | Milestone 7 — Final Documentation and Delivery | Not started | |
@@ -449,6 +449,82 @@ Next step:
 
 ---
 
+### 2026-05-09 - Milestone 3 Traffic Reports, Feedback, and Confidence
+
+Date: 2026-05-09
+
+Milestone: Milestone 3 - Core P0 Feature 2
+
+Files changed:
+
+- `backend/src/main/java/com/yuelutraffic/YueluTrafficBackendApplication.java`
+- `backend/src/main/java/com/yuelutraffic/location/LocationService.java`
+- `backend/src/main/java/com/yuelutraffic/reputation/ReputationEvent.java`
+- `backend/src/main/java/com/yuelutraffic/reputation/ReputationEventRepository.java`
+- `backend/src/main/java/com/yuelutraffic/reports/*`
+- `backend/src/main/java/com/yuelutraffic/user/AppUser.java`
+- `backend/src/main/resources/db/migration/V2__create_reports_and_feedback.sql`
+- `backend/src/test/java/com/yuelutraffic/reports/ReportApiTest.java`
+- `android/src/main/java/com/yuelutraffic/app/MainActivity.kt`
+- `android/src/main/java/com/yuelutraffic/app/traffic/TrafficModels.kt`
+- `android/src/test/java/com/yuelutraffic/app/traffic/TrafficModelsTest.kt`
+- `README.md`
+- `Documentation.md`
+
+Work completed:
+
+- Added persistent traffic report, feedback, and reputation event tables.
+- Added report types for traffic management, construction, congestion, road control, and accident/hazard.
+- Added default expiration rules: congestion 30 minutes, traffic management 6 hours, construction 12 hours, road control 12 hours, accident/hazard 4 hours.
+- Added pilot-area location validation for Central South University and Lushan South Road bounds.
+- Added `POST /api/v1/reports`, `GET /api/v1/reports`, `GET /api/v1/reports/{id}`, and `POST /api/v1/reports/{id}/feedback`.
+- Added one-feedback-per-user-per-report enforcement.
+- Added confidence scoring from type, initial credibility, submitter reputation, feedback weight, and time expiry.
+- Added community expiration behavior when enough users mark a report no longer valid.
+- Added points and reputation updates through auditable reputation events.
+- Added an Android map-style pilot area panel with report markers, local report submission, confirm/no-longer-valid feedback, and a public-code leaderboard panel.
+- Added README examples for report creation, feedback, and report listing.
+
+Commands run:
+
+- `.\gradlew.bat :backend:test`
+- `.\gradlew.bat :android:testDebugUnitTest`
+- `.\gradlew.bat :backend:bootJar`
+- `.\gradlew.bat :android:assembleDebug`
+
+Results:
+
+- Android unit tests passed on the first run for the new traffic model behavior.
+- Backend tests initially failed because the test helper extracted a nested submitter id instead of the report id.
+- Backend tests passed after fixing the test helper.
+- Backend boot jar build passed.
+- Android debug APK build passed.
+
+Failures:
+
+- `ReportApiTest` initially returned 404 for detail and feedback requests because the regex helper extracted the nested user id from the JSON response.
+
+Fixes:
+
+- Changed the test helper to use a non-greedy first-match extraction for response fields.
+
+Decisions:
+
+- Keep production map SDK integration behind the future map-provider boundary; Milestone 3 Android validation uses a credential-free Compose map-style panel.
+- Use deterministic weighted feedback for MVP confidence rather than ML or complex moderation heuristics.
+- Keep one current feedback per user per report for MVP and defer feedback history to a later enhancement.
+
+Assumptions:
+
+- The configured pilot bounding box is sufficient for the MVP area around Central South University and Lushan South Road.
+- Construction and road-control reports default to 12 hours, and accident/hazard reports default to 4 hours until user feedback or admin moderation changes status.
+
+Next step:
+
+- Start Milestone 4 by implementing accident posts, mutual-confirmation contact exchange, admin moderation, review queues, and posting restrictions.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -494,6 +570,10 @@ Next step:
 | 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed | Milestone 2 privacy notice and public code unit tests passed. |
 | 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 2 backend jar build passed. |
 | 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 2 Android debug APK build passed. |
+| 2026-05-09 | `.\gradlew.bat :backend:test` | Failed then passed | Milestone 3 first failed due test helper extracting nested submitter id; fixed helper and reran successfully. |
+| 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed | Milestone 3 Android traffic model tests passed. |
+| 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 3 backend jar build passed. |
+| 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 3 Android debug APK build passed. |
 
 ## Known Issues
 

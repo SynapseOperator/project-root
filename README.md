@@ -84,6 +84,37 @@ Read the public leaderboard, which uses non-sensitive public user codes:
 Invoke-RestMethod http://localhost:8080/api/v1/leaderboard
 ```
 
+Create and evaluate a traffic report:
+
+```powershell
+$report = Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8080/api/v1/reports `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body '{
+    "type":"CONGESTION",
+    "latitude":28.1703,
+    "longitude":112.9388,
+    "locationLabel":"Lushan South Road",
+    "description":"Northbound slow traffic",
+    "initialCredibility":50
+  }'
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8080/api/v1/reports/$($report.id)/feedback" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body '{"feedbackType":"CONFIRM_VALID"}'
+```
+
+List active pilot-area reports:
+
+```powershell
+Invoke-RestMethod "http://localhost:8080/api/v1/reports?minLat=28.12&minLng=112.88&maxLat=28.21&maxLng=112.99"
+```
+
 ## Control Files
 
 ### `AGENTS.md`

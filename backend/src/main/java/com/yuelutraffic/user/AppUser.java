@@ -91,6 +91,7 @@ public class AppUser {
 
     public void setReputationScore(int reputationScore) {
         this.reputationScore = reputationScore;
+        this.titleCode = titleFor(reputationScore, points);
     }
 
     public int getPoints() {
@@ -99,6 +100,7 @@ public class AppUser {
 
     public void setPoints(int points) {
         this.points = points;
+        this.titleCode = titleFor(reputationScore, points);
     }
 
     public String getTitleCode() {
@@ -115,6 +117,28 @@ public class AppUser {
 
     public void setPostingBanUntil(Instant postingBanUntil) {
         this.postingBanUntil = postingBanUntil;
+    }
+
+    public void addPoints(int delta) {
+        setPoints(Math.max(0, points + delta));
+    }
+
+    public void addReputation(int delta) {
+        setReputationScore(Math.max(0, Math.min(100, reputationScore + delta)));
+    }
+
+    public boolean isPostingBanned(Instant now) {
+        return postingBanUntil != null && postingBanUntil.isAfter(now);
+    }
+
+    private String titleFor(int reputation, int pointTotal) {
+        if (reputation >= 80 || pointTotal >= 100) {
+            return "TRUSTED_HELPER";
+        }
+        if (reputation >= 65 || pointTotal >= 30) {
+            return "ROAD_HELPER";
+        }
+        return "NEWCOMER";
     }
 
     public Instant getCreatedAt() {
