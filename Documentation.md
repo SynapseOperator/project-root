@@ -9,13 +9,13 @@ It records what Codex did, why it did it, what is currently complete, what faile
 Status:
 
 - [ ] Not started
-- [ ] In progress
+- [x] In progress
 - [ ] Blocked
-- [x] Completed
+- [ ] Completed
 
 Current milestone:
 
-Chinese UI redesign phase Milestone 7 complete; all known tasks completed
+New active Prompt defined for full backend integration, persistent sessions, production map SDK integration, and release preparation
 
 Last updated:
 
@@ -25,7 +25,7 @@ Last updated:
 
 Brief summary of what this project is building:
 
-This repository is now in the next Yuelu Traffic product phase. The app already builds and runs on Android; the current active goal is to upgrade it into a fully Simplified Chinese, visually polished, map-first Android app with backend-connected core traffic report workflows. The previous MVP requirements are archived under `docs/prompts/` and the root `Prompt.md` is the active requirement source.
+This repository is now in the next Yuelu Traffic product phase. The app has passed phone-side functional testing, and the current active goal is to complete Android backend integration across login/session, traffic reports, accident board, leaderboard, profile, and admin workflows; add persistent login/logout; integrate a production Android map SDK through local key configuration; and prepare release-facing assets and documentation.
 
 ## Technology Stack
 
@@ -33,7 +33,7 @@ Selected stack:
 
 - Android language: Kotlin
 - Android UI: Jetpack Compose with Material 3
-- Android architecture: Jetpack Compose multi-page Chinese UI shell with a map-first home surface, centralized app copy/design tokens, and backend-connected core traffic report workflows being added incrementally
+- Android architecture: Jetpack Compose multi-page Chinese UI shell with full backend-connected workflows, persistent session handling, a production map SDK provider with mock fallback, and release-preparation surfaces
 - Backend language: Java 21
 - Backend framework: Spring Boot REST API
 - Database: PostgreSQL with Flyway migrations
@@ -43,7 +43,7 @@ Selected stack:
 
 Reason for selection:
 
-This stack remains suitable for the new phase because it keeps the Android client native, supports Compose-based UI redesign, reuses the existing Spring Boot APIs, and allows a credential-free polished mock map while production map SDK integration is deferred.
+This stack remains suitable for the new phase because it keeps the Android client native, reuses the existing Spring Boot APIs, supports SDK-backed map integration with a mock fallback, and can still validate locally through Gradle and the existing backend test suite.
 
 ## Milestone Progress
 
@@ -1364,6 +1364,68 @@ Next step:
 
 ---
 
+### 2026-05-09 - Active Prompt Updated for Backend, Map SDK, and Release Phase
+
+Date: 2026-05-09
+
+Milestone: Requirements update before next implementation phase
+
+Files changed:
+
+- `Prompt.md`
+- `docs/prompts/2026-05-09-yuelu-traffic-chinese-ui-redesign.md`
+- `Documentation.md`
+
+Work completed:
+
+- Archived the previous Chinese UI redesign prompt under `docs/prompts/`.
+- Replaced the root `Prompt.md` with the active next-phase requirements.
+- Defined the next phase as full Android backend integration, persistent session handling, production Android map SDK integration, UI polish, and release-preparation work.
+- Scoped P0 to include backend integration for accident board, leaderboard/profile, and Android admin moderation.
+- Required secure local map SDK key configuration and explicitly prohibited committing the raw SDK key to the repository.
+
+Commands run:
+
+- `Get-Content -Raw Prompt.md`
+- `Get-Content -Raw Plan.md`
+- `Get-Content -Raw Implement.md`
+- `Get-Content -Raw Documentation.md`
+- `Get-ChildItem docs\prompts -Force`
+- `Copy-Item -LiteralPath Prompt.md -Destination docs\prompts\2026-05-09-yuelu-traffic-chinese-ui-redesign.md -Force`
+
+Results:
+
+- The active root `Prompt.md` now describes the backend, map SDK, and release-preparation phase.
+- The previous active prompt remains available as a historical snapshot.
+- No application code was changed.
+- The map SDK key provided by the user was not written to tracked project files.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Continue storing historical prompts under `docs/prompts/` while keeping root `Prompt.md` as the only active requirement source.
+- Treat the Android map SDK key as local/development credential material.
+- Keep admin functionality inside the Android app for this phase.
+- Make accident-board contact encryption P1 while connecting the existing backend contact flow in P0.
+
+Assumptions:
+
+- Existing backend APIs are close enough for the P0 Android integration work; implementation may reveal small adapter or contract changes.
+- Phone-over-LAN, emulator, and deployed-backend modes should be supported by configuration rather than hardcoded endpoints.
+
+Next step:
+
+- Start implementation for the new phase by wiring persistent session/logout, full Android API integration for accident/leaderboard/profile/admin flows, secure map SDK configuration with mock fallback, and release-preparation UI/assets/docs.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -1377,6 +1439,9 @@ Next step:
 | 2026-05-09 | Keep P0 admin functionality inside the Android app unless requirements change. | Avoids adding a web frontend stack before it is necessary. |
 | 2026-05-09 | Archive old prompts under `docs/prompts/` and keep root `Prompt.md` as the active source of truth. | Preserves requirement history without confusing future implementation sessions. |
 | 2026-05-09 | Defer production map SDK integration from the Chinese UI redesign P0 scope. | The user wants SDK integration in a later version, while this phase should remain buildable without map credentials. |
+| 2026-05-09 | Move production Android map SDK integration into the new active P0 scope. | The user provided an Android SDK key and approved this phase to include SDK-backed maps. |
+| 2026-05-09 | Do not commit the raw map SDK key to project files. | SDK keys are credential material and should be injected through local configuration or environment-specific files. |
+| 2026-05-09 | Connect accident board, leaderboard/profile, and Android admin flows to backend in this phase. | The user requested full backend API integration after phone-side testing passed. |
 | 2026-05-09 | Use a lightweight Android `HttpURLConnection` client for the first backend connection milestone. | Avoids adding Retrofit/OkHttp before the core API workflow needs justify extra dependencies. |
 | 2026-05-09 | Keep PowerShell validation scripts ASCII-only internally when matching Chinese phrases. | Windows PowerShell may parse UTF-8 `.ps1` files without BOM incorrectly; Unicode code points keep the scripts portable. |
 
@@ -1390,6 +1455,7 @@ Next step:
 | 2026-05-09 | AMap SDK credentials may be unavailable in local development. | Map SDK services commonly require keys, but Milestone 1 should still be buildable. | A fake map adapter and manual production map check are needed. |
 | 2026-05-09 | PostgreSQL without PostGIS is enough for MVP. | The pilot area is small and bounding-box filtering is sufficient for first implementation. | Larger coverage or radius queries may later require PostGIS migration. |
 | 2026-05-09 | Existing backend APIs can support the next phase's P0 Android integration. | The current backend already has tested auth, report listing, report creation, and report feedback APIs. | Some Android API adapter changes may still be needed after implementation starts. |
+| 2026-05-09 | Existing backend APIs are expected to support accident, leaderboard, profile, and admin Android integration. | Backend APIs already exist for these domains according to project documentation. | Small API contract fixes may be needed during implementation. |
 | 2026-05-09 | Android emulator backend access should default to `http://10.0.2.2:8080`. | This is the standard emulator route to a host-machine backend. | Physical-device validation may require a LAN IP or build-time override. |
 
 ## Validation History
@@ -1486,8 +1552,8 @@ Next step:
 | `Prompt.md` is not filled with a concrete project yet. | Medium | Resolved | `Prompt.md` now defines Yuelu Traffic requirements. |
 | GitHub remote is not configured. | Low | Resolved | `origin` is configured as `https://github.com/SynapseOperator/project-root.git`. |
 | Android UI is not yet connected to backend APIs. | High | Resolved for current P0 | Login, `/me`, traffic report list, traffic report creation, detail refresh, and feedback are backend-connected; accident/admin/leaderboard backend connection remains deferred by the active prompt. |
-| Production AMap SDK view is not integrated. | High | Open | Android uses a credential-free Compose map-style panel. AMap credentials and provider adapter integration remain. |
-| Accident board, leaderboard, and admin backend integration are not implemented. | Medium | Deferred by prompt | These surfaces are clearly marked as local/demo in Android and are outside this phase's P0 backend scope. |
+| Production AMap SDK view is not integrated. | High | Open | This is now active P0 scope, with key injection through local configuration and mock fallback required. |
+| Accident board, leaderboard, and admin backend integration are not implemented. | Medium | Open | These are now active P0 scope in root `Prompt.md`. |
 | Android emulator or physical-device workflow validation was not run. | Medium | Open | No running Android device was available; validation used JVM tests, Android lint, and debug APK build. |
 | Docker Compose runtime validation was not run. | Medium | Open | Docker is not installed or not on `PATH` in this environment. |
 | Accident contact storage needs production-grade encryption. | High | Open | Contact values are hidden from public APIs and encoded internally, but real field encryption is still required before deployment. |

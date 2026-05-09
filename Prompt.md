@@ -4,473 +4,362 @@ This file is the active source of truth for current project requirements.
 
 ## Version Note
 
-This is the current active product prompt for the next development phase of Yuelu Traffic.
+This is the active prompt for the next Yuelu Traffic phase.
 
-Previous requirement snapshots should be archived under `docs/prompts/` for history only. Archived prompts are not active requirements unless explicitly copied back into this root `Prompt.md`.
+Previous prompts must be archived under `docs/prompts/` for history only. The root `Prompt.md` is the only active requirement source.
 
 ## 1. Project Name
 
 Yuelu Traffic
 
-App display name remains:
-
-Yuelu Traffic
+The app display name remains `Yuelu Traffic`.
 
 ## 2. Current Product Phase
 
-The app already builds and can run on an Android phone. The next phase is a product polish and usability upgrade focused on:
+The Android app has passed phone-side functional testing. The current phase is to move from a polished Chinese prototype with partial backend integration to a more complete, deployable Android product.
 
-1. Full Simplified Chinese localization.
-2. A complete Android UI redesign.
-3. A map-first user experience.
-4. Connecting core Android flows to the existing backend APIs.
-5. Preserving all existing safety, privacy, and lawful traffic-information boundaries.
+This phase focuses on:
 
-This phase should improve the existing product without expanding into unrelated new features.
+1. Full Android backend API integration.
+2. Persistent login and session handling.
+3. Production map SDK integration.
+4. More polished UI and interaction details.
+5. Release-preparation work such as app icon, launch screen, privacy page, screenshots, and phone/backend setup documentation.
 
 ## 3. One-Sentence Goal
 
-Upgrade Yuelu Traffic into a Simplified Chinese, visually polished, map-first Android app for Central South University and Lushan South Road users, with a clear, useful, slightly playful campus-style interface and backend-connected core traffic report workflows.
+Upgrade Yuelu Traffic into a backend-connected, map-based Android app where login, traffic reports, accident board, leaderboard, profile, and admin workflows all use real backend APIs, while continuing to improve the Chinese campus-style UI and preparing the app for realistic deployment testing.
 
-## 4. Background
+## 4. Current Known State
 
-Yuelu Traffic currently has implemented backend APIs and a runnable Android app, but the Android UI is still a rough local-state prototype. Current problems include:
+Already working:
 
-- User-facing text is mostly English.
-- Some text appears garbled.
-- The UI looks too plain and unpolished for real users.
-- Android screens are not yet structured like a real product.
-- Android core traffic flows are not yet connected to backend APIs.
-- The current map is a simulated Compose panel, not a production map SDK view.
+- Android app builds and runs on phone.
+- Simplified Chinese map-first UI exists.
+- Core traffic workflows are backend-connected:
+  - Student-number login.
+  - Current user session.
+  - Traffic report list.
+  - Traffic report creation.
+  - Traffic report detail refresh.
+  - Traffic report feedback.
+- Backend APIs exist for auth, reports, accidents, leaderboard, and admin moderation.
+- Accident board, leaderboard, and admin pages currently remain local/demo or partially connected.
+- Current map is still a Compose mock map.
+- Production map SDK is not yet integrated.
+- Docker/PostgreSQL runtime validation and real deployment validation remain incomplete.
 
-This phase should make the app feel usable, clear, and interesting for Chinese university students while keeping serious flows such as accidents, privacy, and admin actions appropriately restrained.
+## 5. Product Direction
 
-## 5. Target Users
+The product should remain:
 
-Primary users:
+- Simplified Chinese first.
+- Map-first.
+- Clear, fast, and useful.
+- Visually polished and campus-friendly.
+- Slightly playful in low-risk places.
+- Serious in privacy, accident, moderation, safety, and legal contexts.
 
-- Students and daily commuters around Central South University and Lushan South Road.
+Playful copy may be used for light UI moments, for example:
 
-Secondary users:
+- 路况有点寄
+- 堵麻了
+- 这条消息还活着吗？
+- 已失效，散了散了
+- 上报一下，给同学们续一秒
 
-- Users who need to report traffic conditions.
-- Users who need to check nearby road conditions quickly.
-- Users involved in minor traffic incidents.
-- Administrators reviewing abuse reports and invalid content.
+Do not use playful language for injury, privacy confirmation, contact exchange, bans, admin actions, or legal/safety notices.
 
-User environment:
+## 6. Visual Design Direction
 
-- Android phone.
-- Chinese-language interface.
-- Map-first interaction.
-- Short-session mobile usage while walking, commuting, or checking road conditions.
+Continue the current direction, but improve polish:
 
-## 6. Product Personality and UX Direction
+- Main palette: campus green with clean high-contrast surfaces.
+- Accent colors: warning yellow, signal red, construction orange, road-control purple, info blue.
+- UI should feel like a useful map tool with student-flavored personality.
+- Improve hierarchy, spacing, icon usage, bottom sheets, cards, empty states, loading states, and error states.
+- Strengthen visual design for:
+  - Map markers and marker detail sheet.
+  - Accident board cards.
+  - Leaderboard ranking surface.
+  - Admin moderation dashboard.
+  - Profile page.
+  - Backend/offline state messaging.
+- Optional mascot `MQ` may appear in empty states, tips, and success states, but must not distract from core workflows.
 
-The product should be:
+## 7. Project Type and Stack
 
-- Clear and fast to understand.
-- Visually polished and modern.
-- Slightly playful, with a university-student sense of humor.
-- Useful before it is decorative.
-- Serious where privacy, accidents, moderation, or safety are involved.
-
-Acceptable playful copy examples:
-
-- "路况有点寄"
-- "堵麻了"
-- "这条消息还活着吗？"
-- "已失效，散了散了"
-- "上报一下，给同学们续一秒"
-
-Tone limits:
-
-- Accident, contact exchange, privacy, admin moderation, and legal/safety notices must use clear and respectful language.
-- The app must not joke about injury, harassment, illegal behavior, or evading law enforcement.
-- The app must not provide routing, tactics, or instructions for unlawful traffic behavior.
-
-## 7. Visual Design Direction
-
-Recommended initial visual direction:
-
-- Main palette: fresh campus green with high-contrast black/white text.
-- Accent colors: warning yellow, signal red, road-control purple, construction orange, info blue.
-- Style: clean map utility plus playful campus details.
-- Visual density: map-first and scan-friendly, not a marketing landing page.
-- Components: Material 3 / Jetpack Compose design system.
-- Corners: moderate rounded corners, not overly soft.
-- Typography: clear Chinese mobile typography, no oversized decorative text inside dense tools.
-- Icons: use meaningful icons for report types and actions when possible.
-
-Optional mascot:
-
-- A small mascot named `MQ`.
-- MQ may appear in empty states, tips, onboarding, or success messages.
-- MQ is optional and must not block core functionality.
-- MQ should not appear in accident privacy confirmation or admin abuse workflows unless the tone remains appropriate.
-
-## 8. Project Type
+Project type:
 
 - [x] Android app
 - [x] Backend API service
 - [x] Database project
 - [x] Small complete software engineering project
-- [ ] Web frontend
-- [ ] Desktop app
-- [ ] Machine learning / NLP experiment
 
 Current stack:
 
 - Android: Kotlin + Jetpack Compose + Material 3.
 - Backend: Java 21 + Spring Boot REST API.
-- Database: PostgreSQL target with Flyway migrations; local development may use existing test/development configuration.
+- Database: PostgreSQL target with Flyway migrations.
 - Build: Gradle.
+- Deployment path: Docker Compose / server-hosted backend.
 
-## 9. Current Known Product State
+## 8. P0 Functional Requirements
 
-The app currently has:
+### 8.1 Full Backend Integration
 
-- Android project that builds and runs.
-- Backend APIs for login, traffic reports, feedback, accident board, leaderboard, and admin moderation.
-- Android local-state MVP screens for login, map-style report markers, report submission, feedback, leaderboard, accident board, contact confirmation, and admin actions.
+Android P0 must connect these flows to real backend APIs:
 
-Known limitations to address or preserve:
+1. Login and current user.
+   - Student-number login uses backend auth API.
+   - App retrieves current user from backend.
+   - App does not expose raw student number.
 
-- Android UI currently uses local in-app state for MVP demonstration.
-- Android core traffic flows are not fully connected to backend APIs.
-- The current map is a credential-free simulated Compose panel.
-- Production map SDK integration is deferred to a later phase.
-- Accident board and admin backend integration can be deferred after core traffic API connection.
+2. Persistent session.
+   - Store auth token locally.
+   - Reopen app into signed-in state when token is valid.
+   - Support logout.
+   - If token is invalid or expired, return to login with a clear Chinese message.
 
-## 10. Functional Requirements
+3. Traffic reports.
+   - List reports from backend.
+   - Create reports through backend.
+   - Refresh report detail from backend.
+   - Submit feedback through backend.
+   - Reflect backend confidence/status values in UI.
 
-### P0 - Must Have
+4. Accident board.
+   - Accident list uses backend.
+   - Accident creation uses backend.
+   - Contact request uses backend.
+   - Contact confirmation uses backend.
+   - Contact details remain hidden until mutual confirmation.
+   - P0 may use the existing backend protection model; production-grade field encryption can be P1.
 
-P0 defines the required scope for this phase.
+5. Leaderboard and profile.
+   - Leaderboard uses backend data.
+   - Profile shows backend user points, reputation, title, public code, and restriction state where available.
+   - Student number must never be shown publicly.
 
-1. Full Simplified Chinese localization.
-   - All Android user-facing text must be Simplified Chinese.
-   - This includes page titles, buttons, labels, placeholders, helper text, status text, empty states, error messages, report type names, feedback actions, leaderboard text, accident board text, admin text, and privacy notices.
-   - Remove or fix all garbled characters.
-   - Avoid hardcoded English user-facing strings in Compose UI.
-   - Keep technical identifiers, package names, API paths, and internal code names in English where appropriate.
+6. Admin.
+   - Admin page remains inside the Android app.
+   - Admin entry is visible only for admin/demo-admin users.
+   - Admin can review backend data.
+   - Admin can hide reports.
+   - Admin can hide accident posts.
+   - Admin can apply or clear user posting restrictions.
+   - Admin actions use serious Chinese copy.
 
-2. Preserve app name.
-   - The app display name remains `Yuelu Traffic`.
-   - Chinese text can explain the product, but the displayed product name should not be renamed.
+### 8.2 Backend Connectivity Modes
 
-3. Rebuild Android UI into a formal multi-page structure.
-   Required pages or surfaces:
-   - Login / student number entry page.
-   - Map home page.
-   - Traffic report submission page.
-   - Traffic report detail dialog or detail sheet.
-   - Accident board page.
-   - My/Profile page.
-   - Leaderboard page.
-   - Admin page or admin section.
-   - Bottom navigation shell.
+The app should support these environments:
 
-4. Map-first home screen.
-   - After login, the first screen should be the map home page.
-   - The map area must be the dominant visual element.
-   - Report markers should be visually distinct by type and confidence.
-   - Since map SDK integration is deferred, this phase may use a polished Compose mock map panel.
-   - The mock map must look intentional and product-quality, not like a placeholder rectangle.
+1. Default development mode:
+   - Android emulator connects to host backend through `10.0.2.2`.
+   - Physical phone can connect to backend through LAN IP configuration.
 
-5. Bottom navigation.
-   Required main tabs:
-   - 地图
-   - 上报
-   - 事故栏
-   - 我的
+2. Optional deployment mode:
+   - App can point to a public backend URL.
 
-   Additional navigation:
-   - 排行榜 can live under 我的 or be reachable from the map/profile surface.
-   - 管理员入口 should be hidden under 我的 and visible only for admin users or demo admin state.
+3. Configuration:
+   - Backend base URL must be configurable.
+   - Do not hardcode one machine-specific IP as the only option.
+   - README must explain emulator, LAN phone, and deployed-backend setup.
 
-6. Redesign priority pages.
-   If time is constrained, implement visual redesign in this order:
-   1. Login page.
-   2. Map home page.
-   3. Traffic report submission page.
-   4. Traffic report detail dialog/sheet.
-   5. Accident board.
-   6. My/Profile and leaderboard.
-   7. Admin page.
+### 8.3 Map SDK Integration
 
-7. Backend connection for core P0 traffic workflows.
-   Android P0 must connect to backend APIs for:
-   - Student-number login.
-   - Current user/session display.
-   - Traffic report list.
-   - Traffic report creation.
-   - Traffic report feedback: confirm valid / mark expired.
+This phase should integrate a production Android map SDK.
 
-   Android P0 does not need to connect these workflows yet:
-   - Accident board backend integration.
-   - Admin backend integration.
-   - Leaderboard backend integration, unless already easy and low-risk.
+Requirements:
 
-8. Keep local/demo fallbacks where useful.
-   - If backend is unavailable, the app should show a clear Chinese error or offline/demo message.
-   - The app should not silently pretend local data is live backend data.
-   - Mock data may remain for visual demonstration, but it must be clearly separated from backend-connected state.
+- Use the provided Android map SDK key through local configuration.
+- Do not commit the raw SDK key into the repository.
+- Prefer a provider abstraction so the app can fall back to the existing Compose mock map if SDK setup fails.
+- Map should center around Central South University and Lushan South Road.
+- Backend reports should appear as markers on the real map.
+- Marker type and confidence should be visually distinct.
+- Tapping a marker opens the report detail sheet.
+- The app must still build in environments without the map key, using mock map fallback.
 
-9. Traffic report types must be shown in Chinese.
-   Required report types:
-   - 交通管理提示
-   - 施工
-   - 拥堵
-   - 道路封闭/管制
-   - 事故/异常路况
+Implementation note:
 
-10. Traffic report detail must be understandable.
-    Detail view should show:
-    - Report type.
-    - Location label.
-    - Submission time or relative time.
-    - Description if present.
-    - Confidence score or readable confidence level.
-    - Status.
-    - Confirm count and expired count if available.
-    - Actions: "还有效", "已失效".
-    - Clear copy explaining that community feedback affects report visibility.
+- Treat the provided key as local/development credential material.
+- Store via `local.properties`, environment variable, ignored resource file, or equivalent secure local config.
+- Include setup instructions in README.
+- Follow the current official map SDK documentation for key configuration, manifest metadata, lifecycle handling, and privacy compliance requirements.
 
-11. Traffic report submission must be fast.
-    Submission page should include:
-    - Report type picker.
-    - Location input or current selected location display.
-    - Optional description.
-    - Submit button.
-    - Friendly success state.
-    - Validation error state in Chinese.
+### 8.4 UI Polish
 
-12. Login page must be redesigned.
-    Login page should include:
-    - App name: Yuelu Traffic.
-    - Short Chinese product description.
-    - Student number input.
-    - Privacy acknowledgement checkbox.
-    - Clear statement that student number is used only to distinguish users and is not public identity verification.
-    - Enter button.
-    - Polished visual style matching the new design direction.
+Improve UI beyond the current version:
 
-13. Accident board must be visually improved.
-    - Accident board can remain local/demo data in P0.
-    - It must be fully Chinese.
-    - Contact privacy must remain explicit.
-    - Contact details must not be shown by default.
-    - Mutual confirmation language must be clear and serious.
+- Map home:
+  - Better marker styling.
+  - Better report summary card.
+  - Better detail bottom sheet.
+  - Clear loading/offline/empty states.
+  - Filter chips for report types.
 
-14. Admin page must be visually improved.
-    - Admin page can remain local/demo data in P0.
-    - It must be fully Chinese.
-    - It should show moderation stats and actions in a clearer layout.
-    - Abuse, hiding, and restriction actions must use serious wording.
+- Report submission:
+  - More refined type selector.
+  - Better success feedback.
+  - Better validation messages.
+  - Faster return to map after submission.
 
-15. My/Profile page.
-    The profile page should show:
-    - Public user code, not raw student number.
-    - Reputation/points/title if available.
-    - Leaderboard entry.
-    - Admin entry if applicable.
-    - App safety/privacy notes.
+- Accident board:
+  - More polished cards.
+  - Clear status chips.
+  - Clear privacy messaging.
+  - Better contact confirmation flow.
 
-16. Leaderboard.
-    - Leaderboard must use public display codes, not student numbers.
-    - It should include playful but not abusive title language.
-    - Example titles may include "路况情报员", "校园雷达", "不堵车研究员".
+- Leaderboard:
+  - Real rankings from backend.
+  - Better ranking visual hierarchy.
+  - Fun but safe titles such as 路况情报员、校园雷达、不堵车研究员.
 
-17. Safety and legal boundary must be preserved.
-    - The app may show public road-condition and traffic-management reports.
-    - The app must not provide advice, route planning, tactics, or wording intended to help users evade law enforcement.
-    - User-facing text must avoid "规避交警", "躲避执法", "逃避处罚", or similar framing.
+- Admin:
+  - Dashboard-like stats.
+  - Cleaner review queues.
+  - Clear destructive-action confirmation.
+  - Serious moderation language.
 
-18. Validation.
-    - Android unit tests must pass.
-    - Backend tests must pass if backend integration code changes.
-    - Android debug APK must build.
-    - Safety text scan must pass.
-    - A Chinese text check or review must confirm no obvious English user-facing strings remain in the main Android UI.
-    - Manual phone/emulator visual check should be performed if a device is available.
+- Profile:
+  - Public code.
+  - Points/reputation/title.
+  - Login state.
+  - Logout.
+  - Backend endpoint/status info for debugging.
 
-### P1 - Should Have
+### 8.5 Release Preparation
 
-1. Connect additional Android flows to backend:
-   - Accident board list/create/contact request.
-   - Leaderboard.
-   - Admin review actions.
-   - User restrictions.
+P0 should include:
 
-2. Add improved UI states:
-   - Loading.
-   - Empty.
-   - Error.
-   - Offline/backend unavailable.
-   - Success.
-   - Disabled/restricted posting.
+- App icon.
+- Launch screen / splash screen.
+- In-app privacy and safety page.
+- README phone-backend connection guide.
+- README map SDK key setup guide.
+- Manual test checklist for phone or emulator.
+- Updated screenshots or screenshot instructions if screenshots cannot be captured locally.
 
-3. Improve map interaction.
-   - Marker tap opens detail sheet.
-   - Filter chips for report types.
-   - Confidence legend.
-   - "附近有点动静" style summary card.
+## 9. P1 Requirements
 
-4. Add MQ mascot lightly.
-   - Empty states.
-   - Successful submission.
-   - Login helper text.
-   - No use in serious accident/contact/privacy warnings unless restrained.
+1. Production-grade accident contact encryption.
+   - Encrypt contact values at rest.
+   - Keep contact values out of public APIs.
+   - Document retention and deletion assumptions.
 
-5. Update README user-facing sections in Chinese or bilingual form.
-   - Keep technical setup commands clear.
-   - Add screenshots or visual notes if available.
+2. PostgreSQL / Docker runtime validation.
+   - Run backend against PostgreSQL through Docker Compose where possible.
+   - Record results in `Documentation.md`.
+   - If Docker is unavailable, document manual validation steps.
 
-6. Add screenshot-based UI documentation.
-   - Capture redesigned login page.
-   - Capture redesigned map home.
-   - Capture report submission and detail sheet.
-   - Capture accident board and profile/admin if implemented.
+3. Stronger end-to-end testing.
+   - Phone/emulator test against live backend.
+   - Validate login, map report list, create report, feedback, accident creation, contact confirmation, leaderboard, and admin action.
 
-### P2 - Nice to Have
+4. Improved offline/degraded mode.
+   - Cached last successful report list.
+   - Clear offline state.
+   - Retry action.
 
-1. Production map SDK integration.
-   - Deferred to next phase.
-   - Prefer a provider abstraction so AMap/Baidu/Tencent can be swapped.
-   - Requires developer account, Android key, package name, SHA1, SDK privacy compliance text, and testing on real device.
-   - App must still build without real map credentials.
+5. More refined MQ mascot usage.
+   - Empty state.
+   - Success message.
+   - Onboarding helper.
+   - No mascot in serious flows unless restrained.
 
-2. More advanced playful visual identity.
-   - MQ mascot illustrations.
-   - Custom report icons.
-   - Light animation.
-   - Campus-themed badges.
+## 10. P2 Requirements
 
-3. Push notifications.
-   - Only for high-confidence nearby safety/road-condition events.
-   - Must not encourage unlawful traffic behavior.
-
-4. Image evidence and watermarking.
-   - Deferred.
-   - Must include privacy warnings before upload.
-
-5. QQ group / campus channel import.
-   - Deferred.
-   - Only with documented permission and traffic-related content filtering.
+1. Push notifications for high-confidence nearby road-condition events.
+2. Image evidence and watermarking.
+3. QQ group / campus channel import with documented permission.
+4. Web admin dashboard.
+5. Advanced map features:
+   - Search.
+   - Locate me.
+   - Report clustering.
+   - Custom map style.
+6. Release packaging improvements:
+   - Signed release build.
+   - Versioning.
+   - Crash/error reporting if appropriate.
 
 ## 11. Non-Goals
 
 This phase must not include:
 
-1. Production map SDK integration as a required deliverable.
-2. Paid SDK purchase or commercial map authorization work.
-3. New route planning or navigation behavior.
-4. Any feature that helps users evade law enforcement.
-5. Full accident board backend integration as a P0 requirement.
-6. Full admin backend integration as a P0 requirement.
-7. Image upload.
-8. Push notifications.
-9. Major backend schema redesign unless required for Android API integration.
-10. A separate web admin dashboard.
-11. Changing the app name away from `Yuelu Traffic`.
+1. Any feature that helps users evade law enforcement.
+2. Route planning around traffic management or enforcement presence.
+3. Public display of student numbers.
+4. Public display of contact information before mutual confirmation.
+5. Unapproved scraping of private groups or channels.
+6. Paid map SDK purchase work unless explicitly required later.
+7. Replacing the Android app with a web frontend.
+8. Rewriting the backend from scratch.
+9. Adding large UI frameworks outside the current Compose stack.
+10. Committing SDK keys, backend secrets, signing credentials, or other private credentials to Git.
 
-## 12. Technical Constraints
+## 12. Safety and Privacy Requirements
 
-- Android must remain Kotlin + Jetpack Compose.
-- Use Material 3 where practical.
-- Existing backend APIs should be reused rather than redesigned.
-- Avoid adding large UI frameworks.
-- Prefer a small design system inside the Android module:
-  - Colors
-  - Typography
-  - Spacing
-  - Buttons
-  - Cards/sheets
-  - Report type styles
-- User-facing text should move toward resources or centralized copy definitions rather than scattered hardcoded strings.
-- Mock map must be componentized so a real map provider can replace it later.
-- Backend API base URL should be configurable for development.
-- App must build without map SDK credentials.
+- The app is a traffic safety and public road-condition reporting tool.
+- User-facing copy must avoid unlawful evasion framing.
+- Student numbers must remain private.
+- Public identity must use public user code.
+- Contact information must remain hidden until mutual confirmation.
+- Admin actions must be auditable where backend support exists.
+- SDK key and backend secrets must not be committed to Git.
+- Map SDK privacy/compliance text must be reflected in the privacy page if required by the SDK.
 
-## 13. Input and Output
-
-Expected user input:
-
-- Student number.
-- Privacy acknowledgement.
-- Traffic report type.
-- Location label or selected location.
-- Optional report description.
-- Report feedback: still valid / expired.
-- Accident board post information.
-- Contact confirmation information.
-- Admin demo actions.
-
-Expected output:
-
-- Chinese login and privacy flow.
-- Map-first home page.
-- Chinese report markers and details.
-- Chinese report submission confirmation.
-- Chinese error/loading/empty states.
-- Chinese accident board.
-- Chinese profile/leaderboard/admin pages.
-- Backend-connected traffic report workflows for login, list, create, and feedback.
-
-## 14. Acceptance Criteria
+## 13. Acceptance Criteria
 
 This phase is acceptable when:
 
-1. The Android app builds successfully.
-2. The app can be installed and opened on a phone or emulator.
-3. All main user-facing Android UI text is Simplified Chinese.
-4. No obvious garbled characters remain in the Android UI.
-5. App name remains `Yuelu Traffic`.
-6. Login page is visually redesigned and usable.
-7. Map page is the first signed-in screen.
-8. Map page has a polished mock map and distinct report markers.
-9. Bottom navigation includes 地图, 上报, 事故栏, 我的.
-10. Traffic report submission is redesigned and Chinese.
-11. Traffic report detail sheet/dialog exists and is Chinese.
-12. Android login connects to backend.
-13. Android traffic report list connects to backend.
-14. Android traffic report creation connects to backend.
-15. Android traffic feedback connects to backend.
-16. Backend-unavailable state is visible in Chinese and does not mislead users.
-17. Accident board is visually improved and Chinese, even if still local/demo in P0.
-18. Admin page is visually improved and Chinese, even if still local/demo in P0.
-19. Public user code is shown instead of raw student number.
-20. Leaderboard does not expose student numbers.
-21. Safety/legal wording remains compliant and does not encourage evading law enforcement.
-22. `.\gradlew.bat :android:assembleDebug` passes.
-23. `.\gradlew.bat :android:testDebugUnitTest` passes.
-24. Backend tests pass if backend integration or API contracts are changed.
-25. Safety text scan passes.
-26. Documentation records what was redesigned, what was connected to backend, and what remains deferred.
+1. Android app builds successfully.
+2. Backend tests pass.
+3. Android unit tests pass.
+4. Safety text scan passes.
+5. Chinese text scan passes.
+6. Android login persists session across app restart.
+7. Logout works.
+8. Backend base URL is configurable.
+9. App can connect to backend in emulator mode.
+10. App can be configured for phone-over-LAN backend access.
+11. Traffic report list, create, detail, and feedback use backend.
+12. Accident board list/create/contact request/contact confirmation use backend.
+13. Leaderboard uses backend.
+14. Profile uses backend user data.
+15. Admin review/moderation actions use backend.
+16. Map SDK view works when key is configured.
+17. Mock map fallback works when key is unavailable.
+18. Backend report markers render on the map.
+19. Marker tap opens report detail.
+20. UI remains fully Simplified Chinese for user-facing screens.
+21. No obvious garbled text remains.
+22. App icon and launch screen exist.
+23. In-app privacy/safety page exists.
+24. README explains backend setup, phone connection, emulator connection, and map key setup.
+25. `Documentation.md` records completed work, validation commands, failures, fixes, and remaining risks.
 
-## 15. Done When Checklist
+## 14. Done When Checklist
 
-The phase is done when:
-
-- [ ] Previous Prompt is archived under `docs/prompts/`.
+- [ ] Previous active prompt is archived under `docs/prompts/`.
 - [ ] Root `Prompt.md` contains this active requirement set.
-- [ ] Android UI is fully Simplified Chinese for main user-facing flows.
-- [ ] Garbled UI text is fixed.
-- [ ] Formal multi-page Compose structure exists.
-- [ ] Login page is redesigned.
-- [ ] Map-first home page is redesigned.
-- [ ] Report submission page is redesigned.
-- [ ] Report detail sheet/dialog is implemented.
-- [ ] Accident board is visually improved.
-- [ ] My/Profile page exists.
-- [ ] Leaderboard is accessible.
-- [ ] Admin page is visually improved.
-- [ ] Core traffic workflows connect to backend: login, list, create, feedback.
-- [ ] Backend-unavailable state is handled clearly.
-- [ ] App builds as a debug APK.
-- [ ] Android unit tests pass.
-- [ ] Relevant backend tests pass if backend-facing code changed.
-- [ ] Safety text scan passes.
-- [ ] Documentation is updated with validation results and remaining limitations.
-- [ ] Production map SDK integration remains documented as deferred, not accidentally required for this phase.
+- [ ] Login/session/logout are backend-connected and persistent.
+- [ ] Traffic reports are backend-connected.
+- [ ] Accident board is backend-connected.
+- [ ] Leaderboard is backend-connected.
+- [ ] Profile is backend-connected.
+- [ ] Admin moderation is backend-connected.
+- [ ] Map SDK is integrated with secure local key configuration.
+- [ ] Mock map fallback remains available.
+- [ ] UI polish improvements are applied to map, report detail, accident board, leaderboard, admin, and profile.
+- [ ] App icon exists.
+- [ ] Launch screen exists.
+- [ ] Privacy/safety page exists.
+- [ ] README is updated.
+- [ ] Phone/emulator manual test checklist exists.
+- [ ] Android build passes.
+- [ ] Backend tests pass.
+- [ ] Android tests pass.
+- [ ] Safety and Chinese text scans pass.
+- [ ] `Documentation.md` is updated.
