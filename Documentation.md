@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Repository setup for GitHub handoff
+Repository initialized; awaiting GitHub remote
 
 Last updated:
 
@@ -160,6 +160,10 @@ Next step:
 | 2026-05-09 | `Get-ChildItem -Force` | Passed | Confirmed initial directory state and created workbench directories. |
 | 2026-05-09 | `git rev-parse --is-inside-work-tree` | Not a git repository | No milestone commit was created. |
 | 2026-05-09 | `gh auth status` | Not available | GitHub CLI is not installed in this environment. |
+| 2026-05-09 | `git init` | Passed | Initialized local Git repository. |
+| 2026-05-09 | `git branch -M main` | Passed | Renamed default branch to `main`. |
+| 2026-05-09 | `git commit -m "Initialize Codex project workbench"` | Passed | Created initial local commit `ce9fbdf`. |
+| 2026-05-09 | GitHub connector repository listing | No repositories returned | No target GitHub repository could be inferred automatically. |
 
 ## Known Issues
 
@@ -209,6 +213,9 @@ Results:
 - The directory was not a Git repository before this session.
 - Git is installed and has user identity configured.
 - GitHub CLI is not installed, so automatic GitHub repository creation or push through `gh` is unavailable.
+- The directory is now initialized as a local Git repository on branch `main`.
+- The initial workbench commit was created as `ce9fbdf`.
+- The GitHub connector returned no repositories, so a target GitHub repository could not be inferred.
 
 Failures:
 
@@ -230,3 +237,60 @@ Assumptions:
 Next step:
 
 - Add a GitHub remote with the target repository URL and push the initial commit.
+
+### 2026-05-09 - Local Git Repository Initialized
+
+Date: 2026-05-09
+
+Milestone: Repository setup for GitHub handoff
+
+Files changed:
+
+- `.git/` local repository metadata
+- `Documentation.md`
+
+Work completed:
+
+- Initialized `D:\project-root` as a local Git repository.
+- Renamed the default branch to `main`.
+- Created the first commit containing the workbench control files, README, `.gitignore`, and placeholder directories.
+- Checked for a configured remote and available GitHub repositories.
+
+Commands run:
+
+- `git init`
+- `git branch -M main`
+- `git add .`
+- `git commit -m "Initialize Codex project workbench"`
+- `git status --short`
+- `git log --oneline -1`
+- `git remote -v`
+- GitHub connector repository listing
+
+Results:
+
+- Local commit created: `ce9fbdf Initialize Codex project workbench`.
+- Working tree was clean after the initial commit.
+- No Git remote is configured yet.
+- GitHub connector did not expose a repository list, so the target remote must be supplied manually.
+
+Failures:
+
+- None for local Git initialization.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Use `main` as the default branch name for GitHub compatibility.
+- Stop before pushing because no target GitHub repository URL is known.
+
+Assumptions:
+
+- The target GitHub repository already exists or will be created by the user before pushing.
+
+Next step:
+
+- Provide the target repository URL, then run `git remote add origin <repo-url>` and `git push -u origin main`.
