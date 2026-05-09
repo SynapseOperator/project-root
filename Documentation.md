@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Chinese UI redesign phase Milestone 0 complete; ready for Milestone 1 formal Android UI skeleton
+Chinese UI redesign phase Milestone 1 complete; ready for Milestone 2 backend login/session integration
 
 Last updated:
 
@@ -33,7 +33,7 @@ Selected stack:
 
 - Android language: Kotlin
 - Android UI: Jetpack Compose with Material 3
-- Android architecture: Jetpack Compose app moving from local MVP screens toward formal multi-page UI, Simplified Chinese localization, and backend-connected core traffic report workflows
+- Android architecture: Jetpack Compose multi-page Chinese UI shell with a map-first home surface, centralized app copy/design tokens, and backend-connected core traffic report workflows being added incrementally
 - Backend language: Java 21
 - Backend framework: Spring Boot REST API
 - Database: PostgreSQL with Flyway migrations
@@ -52,8 +52,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone | Status | Notes |
 |---|---|---|
 | Milestone 0 - Project Understanding and Setup | Completed | Active `Prompt.md` defines the Chinese localization, polished map-first UI, and Android backend-connected traffic workflow phase. Previous prompt is archived under `docs/prompts/`. |
-| Milestone 1 - Minimal Running Skeleton | Next | Build a formal multi-page Compose shell, centralized Chinese copy/design tokens, bottom navigation, and polished mock map skeleton. |
-| Milestone 2 - Core P0 Feature 1 | Not started | Connect Android student-number login/session display to backend while preserving Chinese privacy copy and fallback errors. |
+| Milestone 1 - Minimal Running Skeleton | Completed | Replaced the rough local UI with a formal Simplified Chinese Compose shell, centralized copy/design tokens, Chinese bottom navigation, polished mock map, report detail dialog, and local/demo profile, accident, leaderboard, and admin surfaces. |
+| Milestone 2 - Core P0 Feature 1 | Next | Connect Android student-number login/session display to backend while preserving Chinese privacy copy and fallback errors. |
 | Milestone 3 - Core P0 Feature 2 | Not started | Connect Android traffic report list, creation, detail, and feedback to backend. |
 | Milestone 4 - Core P0 Feature 3 | Not started | Polish local/demo accident board, profile/leaderboard, and admin pages in Chinese. |
 | Milestone 5 - Integration and Error Handling | Not started | Exercise integrated Android states, backend unavailable handling, and Chinese/safety text checks. |
@@ -935,6 +935,73 @@ Next step:
 
 ---
 
+### 2026-05-09 - Chinese UI Redesign Phase Milestone 1
+
+Date: 2026-05-09
+
+Milestone: Milestone 1 - Minimal Running Skeleton
+
+Files changed:
+
+- `android/src/main/java/com/yuelutraffic/app/MainActivity.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/AppCopy.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/YueluTheme.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/YueluTrafficApp.kt`
+- `android/src/main/java/com/yuelutraffic/app/auth/PrivacyCopy.kt`
+- `android/src/main/java/com/yuelutraffic/app/traffic/TrafficModels.kt`
+- `android/src/main/java/com/yuelutraffic/app/accidents/AccidentModels.kt`
+- Android unit tests under `android/src/test/java/com/yuelutraffic/app/`
+- `Documentation.md`
+
+Work completed:
+
+- Replaced the old rough local-state single-screen Android UI with a formal Compose app shell.
+- Added centralized Chinese copy, route labels, status labels, profile panel labels, and design color tokens.
+- Added Chinese bottom navigation tabs: 地图, 上报, 事故栏, 我的.
+- Made the signed-in first screen a map-first home page with a polished credential-free Compose mock map and visible report markers.
+- Added a Chinese report detail dialog, report feed, report submission page, accident mutual-help page, profile page, local leaderboard, and demo admin panel.
+- Converted Android-facing traffic, privacy, accident sample data, and tests to Simplified Chinese.
+
+Commands run:
+
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+- `$env:JAVA_HOME='C:\Program Files\JetBrains\PyCharm Community Edition 2024.1.4\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `Get-ChildItem android\src\main\java\com\yuelutraffic\app -Recurse -Filter *.kt | Select-String -Pattern '"[A-Za-z][^"]*"'`
+
+Results:
+
+- Safety text scan passed.
+- Android unit tests passed with Android Studio JBR Java 21.
+- Android debug APK build passed.
+- Chinese text scan found only the retained app brand string `Yuelu Traffic` in main Android Kotlin string literals.
+
+Failures:
+
+- Android unit tests failed when run with PyCharm JBR Java 17 because the project compiles Java 21 class files.
+
+Fixes:
+
+- Re-ran Android validation with `JAVA_HOME=D:\Android Studio\jbr`, which provides Java 21.
+
+Decisions:
+
+- Keep all Milestone 1 Android data local/demo only; backend connection starts in Milestone 2.
+- Keep the mock map as a Compose component so a future SDK-backed map can replace it without changing the surrounding screen structure.
+- Keep the admin panel reachable only through the demo admin profile state until backend roles are connected.
+
+Assumptions:
+
+- `D:\Android Studio\jbr` is the correct local Java 21 runtime for Gradle validation in this workspace.
+- The retained English brand name `Yuelu Traffic` is intentional and allowed by the active prompt.
+
+Next step:
+
+- Start Milestone 2 by adding an Android backend client for student-number login and current session display with clear Chinese offline/demo states.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -964,6 +1031,11 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='C:\Program Files\JetBrains\PyCharm Community Edition 2024.1.4\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Failed | Java 17 could not run Java 21-compiled test classes. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 1 Android unit tests passed with Java 21. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Chinese UI redesign Milestone 1 Android debug APK build passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed after the Chinese UI shell rewrite. |
+| 2026-05-09 | `Get-ChildItem android\src\main\java\com\yuelutraffic\app -Recurse -Filter *.kt \| Select-String -Pattern '"[A-Za-z][^"]*"'` | Passed | Main Android Kotlin string scan found only the retained brand name `Yuelu Traffic`. |
 | 2026-05-09 | `Select-String -Path Prompt.md -Pattern 'Simplified Chinese\|简体中文\|Backend\|后端\|map\|地图\|Production map SDK\|生产地图'` | Passed | Confirmed the active prompt contains the Chinese UI, map-first, backend integration, and production map deferral requirements for the new phase. |
 | 2026-05-09 | `Test-Path docs\prompts\2026-05-09-yuelu-traffic-mvp.md` | Passed | Confirmed the previous MVP prompt archive exists before starting the new milestone sequence. |
 | 2026-05-09 | `Get-ChildItem -Force` | Passed | Confirmed initial directory state and created workbench directories. |
@@ -1021,7 +1093,7 @@ Next step:
 | Android emulator or physical-device workflow validation was not run. | Medium | Open | No running Android device was available; validation used JVM tests, Android lint, and debug APK build. |
 | Docker Compose runtime validation was not run. | Medium | Open | Docker is not installed or not on `PATH` in this environment. |
 | Accident contact storage needs production-grade encryption. | High | Open | Contact values are hidden from public APIs and encoded internally, but real field encryption is still required before deployment. |
-| Android UI is not fully Simplified Chinese and visually polished. | High | Open | This is now the active P0 focus in root `Prompt.md`. |
+| Android UI is not fully Simplified Chinese and visually polished. | High | Resolved for Milestone 1 shell | Main Android Compose screens now use Simplified Chinese and a polished map-first shell; later milestones still need backend states and final text checks. |
 
 ## Final Handoff Notes
 

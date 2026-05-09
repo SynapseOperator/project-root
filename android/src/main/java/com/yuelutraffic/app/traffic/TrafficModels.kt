@@ -8,11 +8,11 @@ enum class TrafficReportType(
     val defaultExpiryMinutes: Long,
     val baseConfidence: Int,
 ) {
-    TRAFFIC_MANAGEMENT("Traffic management presence", 360, 45),
-    CONSTRUCTION("Construction", 720, 50),
-    CONGESTION("Congestion", 30, 45),
-    ROAD_CONTROL("Road closure / traffic control", 720, 55),
-    ACCIDENT_OR_HAZARD("Accident or abnormal road condition", 240, 55),
+    TRAFFIC_MANAGEMENT("交通管理提示", 360, 45),
+    CONSTRUCTION("施工占道", 720, 50),
+    CONGESTION("道路拥堵", 30, 45),
+    ROAD_CONTROL("道路管制", 720, 55),
+    ACCIDENT_OR_HAZARD("事故或异常路况", 240, 55),
 }
 
 enum class TrafficReportStatus {
@@ -52,7 +52,7 @@ fun createTrafficReport(
         type = type,
         latitude = 28.1703,
         longitude = 112.9388,
-        locationLabel = locationLabel.ifBlank { "Central South University / Lushan South Road" },
+        locationLabel = locationLabel.ifBlank { "中南大学 / 麓山南路" },
         description = description.trim(),
         submittedAt = now,
         defaultExpiresAt = now.plusSeconds(type.defaultExpiryMinutes * 60),
@@ -81,14 +81,14 @@ fun TrafficReportUi.applyFeedback(choice: FeedbackChoice): TrafficReportUi {
 fun sampleTrafficReports(now: Instant = Instant.now()): List<TrafficReportUi> = listOf(
     createTrafficReport(
         type = TrafficReportType.CONGESTION,
-        locationLabel = "Lushan South Road northbound",
-        description = "Slow traffic near the campus gate.",
+        locationLabel = "麓山南路中南大学门口",
+        description = "校门口附近车流缓慢，建议耐心通行。",
         now = now,
     ),
     createTrafficReport(
         type = TrafficReportType.CONSTRUCTION,
-        locationLabel = "Near Central South University",
-        description = "Road work occupies one lane.",
+        locationLabel = "后湖路口往东",
+        description = "施工围挡占用一条车道，骑行请注意避让。",
         now = now,
     ).copy(confidenceScore = 58),
 )

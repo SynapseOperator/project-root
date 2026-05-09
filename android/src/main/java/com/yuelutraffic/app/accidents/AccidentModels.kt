@@ -31,7 +31,7 @@ fun createAccidentPost(
     now: Instant = Instant.now(),
 ): AccidentPostUi {
     return AccidentPostUi(
-        locationLabel = locationLabel.ifBlank { "Lushan South Road" },
+        locationLabel = locationLabel.ifBlank { "麓山南路" },
         description = description.trim(),
         occurredAt = now,
     )
@@ -45,14 +45,14 @@ fun AccidentPostUi.confirmContact(otherSideContact: String): AccidentPostUi {
     return copy(
         status = AccidentPostStatus.MATCHED,
         contactExchangeStatus = ContactExchangeStatus.MUTUALLY_CONFIRMED,
-        visibleContacts = listOf("Your saved contact", otherSideContact),
+        visibleContacts = listOf("我方已保存联系方式", otherSideContact),
     )
 }
 
 fun sampleAccidentPosts(now: Instant = Instant.now()): List<AccidentPostUi> = listOf(
     createAccidentPost(
-        locationLabel = "Near Lushan South Road campus gate",
-        description = "Minor incident, contact hidden until both sides confirm.",
+        locationLabel = "麓山南路中南大学门口附近",
+        description = "轻微事故，联系方式需双方确认后显示。",
         now = now,
     ),
 )
