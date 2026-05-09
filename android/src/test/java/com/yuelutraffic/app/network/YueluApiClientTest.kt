@@ -50,6 +50,29 @@ class YueluApiClientTest {
     }
 
     @Test
+    fun leaderboardParserReadsBackendUserSummaries() {
+        val users = parseLeaderboardProfiles(
+            """
+            [
+              {
+                "id": "11111111-1111-1111-1111-111111111111",
+                "publicCode": "User-ABC123",
+                "role": "USER",
+                "reputationScore": 80,
+                "points": 30,
+                "titleCode": "ROAD_HELPER",
+                "postingBanUntil": null
+              }
+            ]
+            """.trimIndent(),
+        )
+
+        assertEquals(1, users.size)
+        assertEquals("User-ABC123", users.first().publicCode)
+        assertEquals(30, users.first().points)
+    }
+
+    @Test
     fun reportRequestBodiesMatchBackendContract() {
         val createBody = createReportRequestBody(
             type = TrafficReportType.CONGESTION,

@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Full integration phase Milestone 2 complete; ready for Milestone 3 leaderboard and profile backend integration
+Full integration phase Milestone 3 complete; ready for Milestone 4 admin backend integration
 
 Last updated:
 
@@ -54,8 +54,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 0 - Project Understanding and Setup | Completed | Active `Prompt.md` defines full Android backend integration, persistent session/logout, configurable backend URLs, production map SDK with mock fallback, and release-preparation scope. Previous active prompt is archived under `docs/prompts/2026-05-09-yuelu-traffic-chinese-ui-redesign.md`. |
 | Milestone 1 - Minimal Running Skeleton | Completed | Added configurable backend base URL, persisted token/user/base URL storage, session restoration, logout, backend status/debug surface, privacy/safety page, and launcher icon baseline. |
 | Milestone 2 - Core P0 Feature 1 | Completed | Accident board list, creation, contact request, and contact confirmation now call backend APIs when online, with local demo fallback and request-id visibility. |
-| Milestone 3 - Core P0 Feature 2 | Next | Connect leaderboard/profile to backend user and ranking data, including restriction state. |
-| Milestone 4 - Core P0 Feature 3 | Not started | Connect Android admin review, report moderation, accident moderation, and user restriction actions to backend. |
+| Milestone 3 - Core P0 Feature 2 | Completed | Leaderboard now loads backend rankings and profile can refresh backend user data, including points, reputation, title, role, and restriction state. |
+| Milestone 4 - Core P0 Feature 3 | Next | Connect Android admin review, report moderation, accident moderation, and user restriction actions to backend. |
 | Milestone 5 - Integration and Error Handling | Not started | Add production map SDK provider abstraction, secure local key config, mock fallback, marker rendering, UI polish, icon/splash/privacy setup, and connection guides. |
 | Milestone 6 - Tests and Quality Check | Not started | Run full Gradle/build/text/safety/TODO quality gate and fix failures. |
 | Milestone 7 - Final Documentation and Delivery | Not started | Final README/Documentation updates, acceptance notes, manual checklist, and final validation. |
@@ -281,6 +281,67 @@ Assumptions:
 Next step:
 
 - Start Milestone 3 by connecting leaderboard and profile surfaces to backend user/ranking data.
+
+---
+
+### 2026-05-09 - Full Integration Phase Milestone 3
+
+Date: 2026-05-09
+
+Milestone: Milestone 3 - Core P0 Feature 2
+
+Files changed:
+
+- `android/src/main/java/com/yuelutraffic/app/network/YueluApiClient.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/YueluTrafficApp.kt`
+- `android/src/test/java/com/yuelutraffic/app/network/YueluApiClientTest.kt`
+- `Documentation.md`
+
+Work completed:
+
+- Added Android backend API support for `GET /api/v1/leaderboard`.
+- Added backend leaderboard response parsing tests.
+- Connected the leaderboard panel to backend ranking data in online sessions.
+- Added profile refresh from backend `/api/v1/me`.
+- Kept profile display tied to backend public code, role, points, reputation, title, and posting restriction state.
+- Preserved a clear local/demo leaderboard path when the app is not online.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+
+Results:
+
+- Android unit tests passed, including leaderboard parsing checks.
+- Android debug APK build passed.
+- Backend tests passed; backend code was not changed.
+- Android Chinese text scan passed.
+- Safety text scan passed.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Keep leaderboard rendering in the profile tab rather than adding a fifth bottom navigation tab, matching the current Chinese app shell.
+- Keep `/me` as the profile source of truth and update local persisted session whenever refresh succeeds.
+
+Assumptions:
+
+- Backend leaderboard ordering is authoritative; Android only assigns displayed rank numbers by response order.
+
+Next step:
+
+- Start Milestone 4 by connecting admin review queues, moderation actions, and posting restrictions to backend APIs.
 
 ---
 
@@ -1673,6 +1734,11 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Full integration Milestone 3 Android tests passed, including leaderboard parser coverage. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 3 Android debug APK build passed after profile/leaderboard backend wiring. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests passed; backend code was unchanged in Milestone 3. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Android Chinese text scan passed after leaderboard/profile backend wiring. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed after leaderboard/profile backend wiring. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Full integration Milestone 2 Android tests passed, including accident API adapter tests. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Full integration Milestone 2 Android debug APK build passed. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests passed, including accident contact privacy tests. |

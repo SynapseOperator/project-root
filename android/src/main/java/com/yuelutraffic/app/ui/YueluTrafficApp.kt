@@ -194,6 +194,10 @@ fun YueluTrafficApp() {
                 apiClient = apiClient,
                 apiBaseUrl = apiBaseUrl,
                 onApiBaseUrlChange = ::saveBaseUrl,
+                onSessionUpdated = { updated ->
+                    sessionStore.saveSession(updated)
+                    session = updated
+                },
                 onLogout = { clearSession("已退出登录。") },
             )
         }
@@ -309,6 +313,7 @@ private fun MainShell(
     apiClient: YueluApiClient,
     apiBaseUrl: String,
     onApiBaseUrlChange: (String) -> Unit,
+    onSessionUpdated: (StudentSessionUi) -> Unit,
     onLogout: () -> Unit,
 ) {
     val reports = remember { mutableStateListOf<TrafficReportUi>().also { it.addAll(sampleTrafficReports()) } }
@@ -320,11 +325,20 @@ private fun MainShell(
     var isReportSubmitting by rememberSaveable { mutableStateOf(false) }
     var isAccidentLoading by rememberSaveable { mutableStateOf(false) }
     var isAccidentSubmitting by rememberSaveable { mutableStateOf(false) }
+    var isLeaderboardLoading by rememberSaveable { mutableStateOf(false) }
     var reportStatusMessage by rememberSaveable {
         mutableStateOf(if (session.isDemoMode) "当前显示本地演示路况，未连接后端列表。" else "正在从后端加载麓山南路附近路况。")
     }
     var accidentStatusMessage by rememberSaveable {
         mutableStateOf(if (session.isDemoMode) "当前显示本地演示互助信息，未连接后端事故栏。" else "正在从后端加载事故互助信息。")
+    }
+    var profileStatusMessage by rememberSaveable {
+        mutableStateOf(if (session.isDemoMode) "当前为本地演示资料。" else "资料来自后端当前用户接口。")
+    }
+    val leaderboardRows = remember {
+        mutableStateListOf<LeaderboardEntryUi>().also {
+            it.addAll(leaderboardEntries(session, 0))
+        }
     }
 
     fun replaceReport(updated: TrafficReportUi) {
@@ -518,10 +532,66 @@ private fun MainShell(
         }
     }
 
+    fun refreshProfile() {
+        val token = session.accessToken
+        if (session.isDemoMode || token == null) {
+            profileStatusMessage = "演示模式不刷新后端资料。"
+            return
+        }
+        profileStatusMessage = "正在刷新后端资料。"
+        apiClient.fetchMe(token) { result ->
+            when (result) {
+                is ApiResult.Success -> {
+                    val updated = result.value.toUiSession(
+                        accessToken = token,
+                        connectionMessage = "已刷新后端当前用户资料。",
+                    )
+                    onSessionUpdated(updated)
+                    profileStatusMessage = "后端资料已刷新。"
+                }
+                is ApiResult.Failure -> {
+                    profileStatusMessage = "资料刷新失败：${result.message}"
+                }
+            }
+        }
+    }
+
+    fun loadLeaderboard() {
+        if (session.isDemoMode) {
+            leaderboardRows.clear()
+            leaderboardRows.addAll(leaderboardEntries(session, reports.count { it.status == TrafficReportStatus.ACTIVE }))
+            profileStatusMessage = "当前显示本地演示排行榜。"
+            return
+        }
+        isLeaderboardLoading = true
+        profileStatusMessage = "正在加载后端排行榜。"
+        apiClient.listLeaderboard { result ->
+            isLeaderboardLoading = false
+            when (result) {
+                is ApiResult.Success -> {
+                    leaderboardRows.clear()
+                    leaderboardRows.addAll(result.value.mapIndexed { index, user ->
+                        LeaderboardEntryUi(
+                            rank = index + 1,
+                            publicCode = user.publicCode,
+                            points = user.points,
+                            title = titleLabel(user.titleCode),
+                        )
+                    })
+                    profileStatusMessage = "已从后端加载 ${result.value.size} 条排行榜数据。"
+                }
+                is ApiResult.Failure -> {
+                    profileStatusMessage = "排行榜加载失败：${result.message}"
+                }
+            }
+        }
+    }
+
     LaunchedEffect(session.accessToken, session.isDemoMode) {
         if (!session.isDemoMode) {
             loadBackendReports()
             loadBackendAccidents()
+            loadLeaderboard()
         }
     }
 
@@ -576,8 +646,13 @@ private fun MainShell(
                 apiBaseUrl = apiBaseUrl,
                 onApiBaseUrlChange = onApiBaseUrlChange,
                 activeReports = reports.count { it.status == TrafficReportStatus.ACTIVE },
+                leaderboardEntries = leaderboardRows,
+                profileStatusMessage = profileStatusMessage,
+                isLeaderboardLoading = isLeaderboardLoading,
                 accidents = accidents,
                 postingRestricted = postingRestricted,
+                onRefreshProfile = ::refreshProfile,
+                onRefreshLeaderboard = ::loadLeaderboard,
                 onHideReport = {
                     val index = reports.indexOfFirst {
                         it.status == TrafficReportStatus.ACTIVE || it.status == TrafficReportStatus.UNDER_REVIEW
@@ -795,8 +870,13 @@ private fun ProfileScreen(
     apiBaseUrl: String,
     onApiBaseUrlChange: (String) -> Unit,
     activeReports: Int,
+    leaderboardEntries: List<LeaderboardEntryUi>,
+    profileStatusMessage: String,
+    isLeaderboardLoading: Boolean,
     accidents: List<AccidentPostUi>,
     postingRestricted: Boolean,
+    onRefreshProfile: () -> Unit,
+    onRefreshLeaderboard: () -> Unit,
     onHideReport: () -> Unit,
     onHideAccident: () -> Unit,
     onToggleRestriction: () -> Unit,
@@ -839,11 +919,18 @@ private fun ProfileScreen(
                     activeReports = activeReports,
                     apiBaseUrl = apiBaseUrl,
                     onApiBaseUrlChange = onApiBaseUrlChange,
+                    profileStatusMessage = profileStatusMessage,
+                    onRefreshProfile = onRefreshProfile,
                     onLogout = onLogout,
                 )
             }
             ProfilePanel.Leaderboard -> item {
-                LeaderboardPanel(entries = leaderboardEntries(session, activeReports))
+                LeaderboardPanel(
+                    entries = leaderboardEntries,
+                    statusMessage = profileStatusMessage,
+                    isLoading = isLeaderboardLoading,
+                    onRefresh = onRefreshLeaderboard,
+                )
             }
             ProfilePanel.Admin -> item {
                 AdminPanel(
@@ -1131,6 +1218,8 @@ private fun ProfileOverview(
     activeReports: Int,
     apiBaseUrl: String,
     onApiBaseUrlChange: (String) -> Unit,
+    profileStatusMessage: String,
+    onRefreshProfile: () -> Unit,
     onLogout: () -> Unit,
 ) {
     ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface), shape = RoundedCornerShape(8.dp)) {
@@ -1143,6 +1232,7 @@ private fun ProfileOverview(
             Text("当前生效上报：$activeReports 条")
             Text("限制状态：${session.postingBanUntil ?: "未限制"}")
             Text("模式：${if (session.isDemoMode) "本地演示" else "后端在线"}")
+            Text(profileStatusMessage, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
             OutlinedTextField(
                 value = apiBaseUrl,
                 onValueChange = onApiBaseUrlChange,
@@ -1152,6 +1242,9 @@ private fun ProfileOverview(
                 singleLine = true,
             )
             Text("学号不会公开展示，排行榜仅展示应用内代码。", style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
+            Button(onClick = onRefreshProfile, modifier = Modifier.fillMaxWidth()) {
+                Text("刷新后端资料")
+            }
             OutlinedButton(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
                 Text("退出登录")
             }
@@ -1160,11 +1253,20 @@ private fun ProfileOverview(
 }
 
 @Composable
-private fun LeaderboardPanel(entries: List<LeaderboardEntryUi>) {
+private fun LeaderboardPanel(
+    entries: List<LeaderboardEntryUi>,
+    statusMessage: String,
+    isLoading: Boolean,
+    onRefresh: () -> Unit,
+) {
     ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("校园互助排行榜", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(AppCopy.leaderboardDemoNotice, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
+            Text(statusMessage, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
+            OutlinedButton(enabled = !isLoading, onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
+                Text(if (isLoading) "正在刷新排行榜" else "刷新排行榜")
+            }
             entries.forEach { entry ->
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("${entry.rank}. ${entry.publicCode}", fontWeight = if (entry.rank == 1) FontWeight.Bold else FontWeight.Normal)

@@ -71,6 +71,12 @@ class YueluApiClient(
         }
     }
 
+    fun listLeaderboard(callback: (ApiResult<List<BackendUserProfile>>) -> Unit) {
+        execute(callback) {
+            parseLeaderboardProfiles(getJson(path = "/api/v1/leaderboard", accessToken = null))
+        }
+    }
+
     fun listTrafficReports(callback: (ApiResult<List<TrafficReportUi>>) -> Unit) {
         execute(callback) {
             parseTrafficReports(
@@ -309,6 +315,13 @@ internal fun parseAuthSession(json: String): BackendAuthSession {
 
 internal fun parseUserProfile(json: String): BackendUserProfile {
     return parseUserProfile(JSONObject(json))
+}
+
+internal fun parseLeaderboardProfiles(json: String): List<BackendUserProfile> {
+    val array = JSONArray(json)
+    return List(array.length()) { index ->
+        parseUserProfile(array.getJSONObject(index))
+    }
 }
 
 internal fun parseTrafficReports(json: String): List<TrafficReportUi> {
