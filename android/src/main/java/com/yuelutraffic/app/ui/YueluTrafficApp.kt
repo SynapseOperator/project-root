@@ -603,6 +603,12 @@ private fun AccidentBoardScreen(
             )
         }
         item {
+            StatusNotice(
+                title = "本地演示",
+                body = AppCopy.accidentDemoNotice,
+            )
+        }
+        item {
             ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface)) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -695,7 +701,7 @@ private fun ProfileScreen(
             }
             ProfilePanel.Leaderboard -> item {
                 LeaderboardPanel(
-                    entries = leaderboardEntries(session.publicCode, activeReports),
+                    entries = leaderboardEntries(session, activeReports),
                 )
             }
             ProfilePanel.Admin -> item {
@@ -1025,6 +1031,15 @@ private fun ProfileOverview(session: StudentSessionUi, activeReports: Int) {
             Text("信誉：${session.reputationScore} · 积分：${session.points}")
             Text("当前生效上报：$activeReports 条")
             Text("模式：${if (session.isDemoMode) "本地演示" else "后端在线"}")
+            Text(
+                text = if (session.isDemoMode) {
+                    "当前页面全部使用本地演示数据。"
+                } else {
+                    "登录和路况已连接后端；事故栏、排行榜、管理员仍按本阶段演示边界处理。"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = YueluColors.InkMuted,
+            )
             Text("学号不会公开展示，排行榜仅展示应用内代码。", style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
         }
     }
@@ -1038,6 +1053,7 @@ private fun LeaderboardPanel(entries: List<LeaderboardEntryUi>) {
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("校园互助排行榜", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(AppCopy.leaderboardDemoNotice, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
             entries.forEach { entry ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1066,6 +1082,7 @@ private fun AdminPanel(
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("演示管理员面板", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(AppCopy.adminDemoNotice, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
             Text("开放互助信息：${accidents.count { it.status == AccidentPostStatus.OPEN }} 条")
             Text("上报限制：${if (postingRestricted) "已开启" else "未开启"}")
             Button(onClick = onHideReport, modifier = Modifier.fillMaxWidth()) {
@@ -1081,8 +1098,8 @@ private fun AdminPanel(
     }
 }
 
-private fun leaderboardEntries(publicCode: String, activeReports: Int): List<LeaderboardEntryUi> = listOf(
-    LeaderboardEntryUi(1, publicCode, 24 + activeReports * 2, "麓山观察员"),
+private fun leaderboardEntries(session: StudentSessionUi, activeReports: Int): List<LeaderboardEntryUi> = listOf(
+    LeaderboardEntryUi(1, session.publicCode, session.points + activeReports * 2, titleLabel(session.titleCode)),
     LeaderboardEntryUi(2, "同学-8A19C2", 22, "通勤雷达"),
     LeaderboardEntryUi(3, "同学-31F0B7", 18, "安全提醒员"),
 )

@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Chinese UI redesign phase Milestone 3 complete; ready for Milestone 4 Chinese polish for accident/profile/leaderboard/admin pages
+Chinese UI redesign phase Milestone 4 complete; ready for Milestone 5 integration and text validation checks
 
 Last updated:
 
@@ -55,8 +55,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 1 - Minimal Running Skeleton | Completed | Replaced the rough local UI with a formal Simplified Chinese Compose shell, centralized copy/design tokens, Chinese bottom navigation, polished mock map, report detail dialog, and local/demo profile, accident, leaderboard, and admin surfaces. |
 | Milestone 2 - Core P0 Feature 1 | Completed | Android login now calls backend `/api/v1/auth/student`, refreshes current user with `/api/v1/me`, uses configurable `API_BASE_URL`, shows Chinese loading/error/demo states, and keeps student-number privacy copy in Chinese. |
 | Milestone 3 - Core P0 Feature 2 | Completed | Android traffic report list, detail refresh, creation, and feedback now use backend APIs when logged in online, with clearly labeled local demo fallback. |
-| Milestone 4 - Core P0 Feature 3 | Next | Polish local/demo accident board, profile/leaderboard, and admin pages in Chinese. |
-| Milestone 5 - Integration and Error Handling | Not started | Exercise integrated Android states, backend unavailable handling, and Chinese/safety text checks. |
+| Milestone 4 - Core P0 Feature 3 | Completed | Accident board, profile, leaderboard, and demo admin pages now have clearer Chinese copy, local/demo boundaries, privacy notes, and role-aware admin visibility. |
+| Milestone 5 - Integration and Error Handling | Next | Exercise integrated Android states, backend unavailable handling, and Chinese/safety text checks. |
 | Milestone 6 - Tests and Quality Check | Not started | Add or update tests and run full practical validation. |
 | Milestone 7 - Final Documentation and Delivery | Not started | Final README/Documentation updates, acceptance notes, and final validation. |
 
@@ -1129,6 +1129,65 @@ Next step:
 
 ---
 
+### 2026-05-09 - Chinese UI Redesign Phase Milestone 4
+
+Date: 2026-05-09
+
+Milestone: Milestone 4 - Core P0 Feature 3
+
+Files changed:
+
+- `android/src/main/java/com/yuelutraffic/app/ui/AppCopy.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/YueluTrafficApp.kt`
+- `android/src/test/java/com/yuelutraffic/app/accidents/AccidentModelsTest.kt`
+- `Documentation.md`
+
+Work completed:
+
+- Added explicit Chinese local/demo notices for the accident board, leaderboard, and admin panel.
+- Clarified that accident mutual-help contact details remain private and the current accident board does not write to backend.
+- Updated profile overview to show backend-connected versus local-demo boundaries.
+- Updated leaderboard to use the current session's backend/demo points and title while preserving public-code-only display.
+- Kept admin visibility role-aware: backend admins or demo admin state only.
+- Added an accident model test to verify Simplified Chinese fallback/sample copy.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+
+Results:
+
+- Android unit tests passed.
+- Android debug APK build passed.
+- Backend tests passed; backend code was not changed.
+- Safety text scan passed.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Keep accident board, leaderboard, and admin data local/demo in this phase, consistent with the active prompt's P0 backend scope.
+- Keep demo admin visible only through demo/admin session state rather than exposing a general admin tab.
+
+Assumptions:
+
+- Clear in-app Chinese copy is sufficient for the deferred backend scope as long as these pages do not claim to be live backend data.
+
+Next step:
+
+- Start Milestone 5 by adding automated Chinese text and safety checks that protect the new localized Android surface.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -1160,6 +1219,10 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 4 Android unit tests passed, including accident Chinese fallback copy. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Chinese UI redesign Milestone 4 Android debug APK build passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend tests still pass; no backend code changed in Milestone 4. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed after accident/profile/admin Chinese polish. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 3 Android unit tests passed, including traffic report request/response adapter tests. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Chinese UI redesign Milestone 3 Android debug APK build passed. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend report API contract tests still pass after Android report integration. |
@@ -1228,6 +1291,7 @@ Next step:
 | GitHub remote is not configured. | Low | Resolved | `origin` is configured as `https://github.com/SynapseOperator/project-root.git`. |
 | Android UI is not yet connected to backend APIs. | High | Resolved for current P0 | Login, `/me`, traffic report list, traffic report creation, detail refresh, and feedback are backend-connected; accident/admin/leaderboard backend connection remains deferred by the active prompt. |
 | Production AMap SDK view is not integrated. | High | Open | Android uses a credential-free Compose map-style panel. AMap credentials and provider adapter integration remain. |
+| Accident board, leaderboard, and admin backend integration are not implemented. | Medium | Deferred by prompt | These surfaces are clearly marked as local/demo in Android and are outside this phase's P0 backend scope. |
 | Android emulator or physical-device workflow validation was not run. | Medium | Open | No running Android device was available; validation used JVM tests, Android lint, and debug APK build. |
 | Docker Compose runtime validation was not run. | Medium | Open | Docker is not installed or not on `PATH` in this environment. |
 | Accident contact storage needs production-grade encryption. | High | Open | Contact values are hidden from public APIs and encoded internally, but real field encryption is still required before deployment. |

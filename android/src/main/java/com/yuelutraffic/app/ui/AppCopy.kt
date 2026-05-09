@@ -12,6 +12,9 @@ object AppCopy {
     const val mapSdkDeferred = "地图为组件化模拟视图，后续可替换为正式地图 SDK。"
     const val lawfulUse = "仅用于共享道路安全与拥堵信息，请遵守交通规则。"
     const val backendDeferred = "核心后端连接将在后续里程碑接入。"
+    const val accidentDemoNotice = "事故互助栏本阶段为本地演示，不会写入后端。联系方式默认不公开。"
+    const val leaderboardDemoNotice = "排行榜展示应用内代码，不展示学号；本阶段为本地演示排序。"
+    const val adminDemoNotice = "管理员面板仅演示审核交互，不会修改后端数据。"
 }
 
 enum class MainTab(

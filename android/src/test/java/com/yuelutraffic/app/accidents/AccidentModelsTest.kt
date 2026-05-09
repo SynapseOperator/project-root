@@ -18,4 +18,12 @@ class AccidentModelsTest {
         assertEquals(ContactExchangeStatus.MUTUALLY_CONFIRMED, confirmed.contactExchangeStatus)
         assertEquals(2, confirmed.visibleContacts.size)
     }
+
+    @Test
+    fun accidentFallbackCopyIsSimplifiedChinese() {
+        val accident = createAccidentPost("", "轻微事故")
+
+        assertEquals("麓山南路", accident.locationLabel)
+        assertTrue(sampleAccidentPosts().first().description.contains("联系方式"))
+    }
 }
