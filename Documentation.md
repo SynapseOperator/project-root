@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Chinese UI redesign phase Milestone 1 complete; ready for Milestone 2 backend login/session integration
+Chinese UI redesign phase Milestone 2 complete; ready for Milestone 3 traffic report backend integration
 
 Last updated:
 
@@ -53,8 +53,8 @@ This stack remains suitable for the new phase because it keeps the Android clien
 |---|---|---|
 | Milestone 0 - Project Understanding and Setup | Completed | Active `Prompt.md` defines the Chinese localization, polished map-first UI, and Android backend-connected traffic workflow phase. Previous prompt is archived under `docs/prompts/`. |
 | Milestone 1 - Minimal Running Skeleton | Completed | Replaced the rough local UI with a formal Simplified Chinese Compose shell, centralized copy/design tokens, Chinese bottom navigation, polished mock map, report detail dialog, and local/demo profile, accident, leaderboard, and admin surfaces. |
-| Milestone 2 - Core P0 Feature 1 | Next | Connect Android student-number login/session display to backend while preserving Chinese privacy copy and fallback errors. |
-| Milestone 3 - Core P0 Feature 2 | Not started | Connect Android traffic report list, creation, detail, and feedback to backend. |
+| Milestone 2 - Core P0 Feature 1 | Completed | Android login now calls backend `/api/v1/auth/student`, refreshes current user with `/api/v1/me`, uses configurable `API_BASE_URL`, shows Chinese loading/error/demo states, and keeps student-number privacy copy in Chinese. |
+| Milestone 3 - Core P0 Feature 2 | Next | Connect Android traffic report list, creation, detail, and feedback to backend. |
 | Milestone 4 - Core P0 Feature 3 | Not started | Polish local/demo accident board, profile/leaderboard, and admin pages in Chinese. |
 | Milestone 5 - Integration and Error Handling | Not started | Exercise integrated Android states, backend unavailable handling, and Chinese/safety text checks. |
 | Milestone 6 - Tests and Quality Check | Not started | Add or update tests and run full practical validation. |
@@ -1002,6 +1002,71 @@ Next step:
 
 ---
 
+### 2026-05-09 - Chinese UI Redesign Phase Milestone 2
+
+Date: 2026-05-09
+
+Milestone: Milestone 2 - Core P0 Feature 1
+
+Files changed:
+
+- `android/build.gradle`
+- `android/src/main/AndroidManifest.xml`
+- `android/src/main/java/com/yuelutraffic/app/network/YueluApiClient.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/AppCopy.kt`
+- `android/src/main/java/com/yuelutraffic/app/ui/YueluTrafficApp.kt`
+- `android/src/test/java/com/yuelutraffic/app/network/YueluApiClientTest.kt`
+- `Documentation.md`
+
+Work completed:
+
+- Added Android internet permission and configurable `BuildConfig.API_BASE_URL`, defaulting to `http://10.0.2.2:8080` for emulator-to-host backend access.
+- Added a lightweight `HttpURLConnection` API client for backend student login and `/api/v1/me`.
+- Added backend auth/session response models and JVM tests for login request JSON and backend response parsing.
+- Connected the login screen to the backend with Chinese loading, failure, and explicit local demo fallback states.
+- Updated the profile/session surface to show backend role, reputation, points, title, and online/demo state.
+- Preserved the privacy boundary: student number remains private, and demo mode is clearly labeled as not connected to backend.
+
+Commands run:
+
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug`
+- `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+- `Test-Path android\build\outputs\apk\debug\android-debug.apk`
+
+Results:
+
+- Android unit tests passed.
+- Android debug APK build passed and the debug APK exists.
+- Backend tests passed; backend code was not changed, but the API contract was rechecked for this Android integration milestone.
+- Safety text scan passed.
+
+Failures:
+
+- Initial `YueluApiClientTest` failed because local JVM unit tests used the Android `org.json` stub.
+
+Fixes:
+
+- Added test-only `org.json:json:20240303` so backend response parsing is tested on the JVM without changing production Android runtime behavior.
+
+Decisions:
+
+- Keep the API client dependency footprint small and use platform `HttpURLConnection` instead of adding Retrofit/OkHttp for this phase.
+- Do not display the backend's English privacy notice directly in Android; Android keeps the active Chinese privacy copy.
+- Keep demo mode user-visible and opt-in when the backend is unavailable.
+
+Assumptions:
+
+- Android emulator backend access should use `10.0.2.2:8080`; physical-device validation may need a LAN host override later.
+- Backend login and `/me` contracts remain compatible with the existing Spring Boot tests.
+
+Next step:
+
+- Start Milestone 3 by connecting report listing, creation, detail refresh, and feedback actions to backend traffic report APIs.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -1015,6 +1080,7 @@ Next step:
 | 2026-05-09 | Keep P0 admin functionality inside the Android app unless requirements change. | Avoids adding a web frontend stack before it is necessary. |
 | 2026-05-09 | Archive old prompts under `docs/prompts/` and keep root `Prompt.md` as the active source of truth. | Preserves requirement history without confusing future implementation sessions. |
 | 2026-05-09 | Defer production map SDK integration from the Chinese UI redesign P0 scope. | The user wants SDK integration in a later version, while this phase should remain buildable without map credentials. |
+| 2026-05-09 | Use a lightweight Android `HttpURLConnection` client for the first backend connection milestone. | Avoids adding Retrofit/OkHttp before the core API workflow needs justify extra dependencies. |
 
 ## Assumptions
 
@@ -1026,11 +1092,17 @@ Next step:
 | 2026-05-09 | AMap SDK credentials may be unavailable in local development. | Map SDK services commonly require keys, but Milestone 1 should still be buildable. | A fake map adapter and manual production map check are needed. |
 | 2026-05-09 | PostgreSQL without PostGIS is enough for MVP. | The pilot area is small and bounding-box filtering is sufficient for first implementation. | Larger coverage or radius queries may later require PostGIS migration. |
 | 2026-05-09 | Existing backend APIs can support the next phase's P0 Android integration. | The current backend already has tested auth, report listing, report creation, and report feedback APIs. | Some Android API adapter changes may still be needed after implementation starts. |
+| 2026-05-09 | Android emulator backend access should default to `http://10.0.2.2:8080`. | This is the standard emulator route to a host-machine backend. | Physical-device validation may require a LAN IP or build-time override. |
 
 ## Validation History
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 2 Android unit tests passed, including backend login request/response adapter tests. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Chinese UI redesign Milestone 2 Android debug APK build passed. |
+| 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :backend:test` | Passed | Backend auth/session contract tests still pass after Android login integration. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Safety text scan passed after backend login wiring. |
+| 2026-05-09 | `Test-Path android\build\outputs\apk\debug\android-debug.apk` | Passed | Confirmed the debug APK artifact exists after the Milestone 2 build. |
 | 2026-05-09 | `$env:JAVA_HOME='C:\Program Files\JetBrains\PyCharm Community Edition 2024.1.4\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Failed | Java 17 could not run Java 21-compiled test classes. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:testDebugUnitTest` | Passed | Chinese UI redesign Milestone 1 Android unit tests passed with Java 21. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat :android:assembleDebug` | Passed | Chinese UI redesign Milestone 1 Android debug APK build passed. |
@@ -1088,7 +1160,7 @@ Next step:
 |---|---|---|---|
 | `Prompt.md` is not filled with a concrete project yet. | Medium | Resolved | `Prompt.md` now defines Yuelu Traffic requirements. |
 | GitHub remote is not configured. | Low | Resolved | `origin` is configured as `https://github.com/SynapseOperator/project-root.git`. |
-| Android UI is not yet connected to backend APIs. | High | Open | Backend APIs are implemented and tested; Android currently uses local state for MVP workflow demonstration. |
+| Android UI is not yet connected to backend APIs. | High | Partially resolved | Login and `/me` session display are backend-connected; traffic report list/create/feedback remain for Milestone 3. |
 | Production AMap SDK view is not integrated. | High | Open | Android uses a credential-free Compose map-style panel. AMap credentials and provider adapter integration remain. |
 | Android emulator or physical-device workflow validation was not run. | Medium | Open | No running Android device was available; validation used JVM tests, Android lint, and debug APK build. |
 | Docker Compose runtime validation was not run. | Medium | Open | Docker is not installed or not on `PATH` in this environment. |

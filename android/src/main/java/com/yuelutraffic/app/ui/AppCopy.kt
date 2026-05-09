@@ -32,9 +32,17 @@ enum class ProfilePanel(val label: String) {
 
 data class StudentSessionUi(
     val publicCode: String,
+    val accessToken: String? = null,
+    val role: String = "DEMO",
+    val reputationScore: Int = 60,
+    val points: Int = 24,
+    val titleCode: String = "LOCAL_HELPER",
+    val connectionMessage: String = AppCopy.demoModeNotice,
     val isDemoMode: Boolean = true,
-    val isDemoAdmin: Boolean = true,
-)
+) {
+    val isDemoAdmin: Boolean
+        get() = isDemoMode || role == "ADMIN"
+}
 
 data class LeaderboardEntryUi(
     val rank: Int,
@@ -65,4 +73,16 @@ fun contactStatusLabel(status: ContactExchangeStatus): String = when (status) {
     ContactExchangeStatus.NONE -> "未申请"
     ContactExchangeStatus.PENDING -> "等待对方确认"
     ContactExchangeStatus.MUTUALLY_CONFIRMED -> "双方已确认"
+}
+
+fun roleLabel(role: String): String = when (role) {
+    "ADMIN" -> "管理员"
+    "USER" -> "普通用户"
+    else -> "演示用户"
+}
+
+fun titleLabel(titleCode: String): String = when (titleCode) {
+    "ROAD_HELPER" -> "道路互助员"
+    "LOCAL_HELPER" -> "麓山观察员"
+    else -> "校园路况伙伴"
 }

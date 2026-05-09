@@ -64,6 +64,10 @@ import com.yuelutraffic.app.accidents.requestContact
 import com.yuelutraffic.app.accidents.sampleAccidentPosts
 import com.yuelutraffic.app.auth.PRIVACY_NOTICE
 import com.yuelutraffic.app.auth.publicCodeForStudentNumber
+import com.yuelutraffic.app.network.ApiResult
+import com.yuelutraffic.app.network.BackendAuthSession
+import com.yuelutraffic.app.network.BackendUserProfile
+import com.yuelutraffic.app.network.YueluApiClient
 import com.yuelutraffic.app.traffic.FeedbackChoice
 import com.yuelutraffic.app.traffic.TrafficReportStatus
 import com.yuelutraffic.app.traffic.TrafficReportType
@@ -74,8 +78,10 @@ import com.yuelutraffic.app.traffic.sampleTrafficReports
 
 @Composable
 fun YueluTrafficApp() {
-    var sessionPublicCode by rememberSaveable { mutableStateOf<String?>(null) }
-    val session = sessionPublicCode?.let { StudentSessionUi(publicCode = it) }
+    val apiClient = remember { YueluApiClient() }
+    var session by remember { mutableStateOf<StudentSessionUi?>(null) }
+    var isLoggingIn by rememberSaveable { mutableStateOf(false) }
+    var loginError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -84,8 +90,42 @@ fun YueluTrafficApp() {
         val signedInSession = session
         if (signedInSession == null) {
             LoginScreen(
+                isLoading = isLoggingIn,
+                errorMessage = loginError,
                 onLogin = { studentNumber ->
-                    sessionPublicCode = publicCodeForStudentNumber(studentNumber)
+                    isLoggingIn = true
+                    loginError = null
+                    apiClient.studentLogin(studentNumber) { result ->
+                        isLoggingIn = false
+                        when (result) {
+                            is ApiResult.Success -> {
+                                val backendSession = result.value
+                                session = backendSession.toUiSession("已连接后端登录服务，正在刷新当前用户。")
+                                apiClient.fetchMe(backendSession.accessToken) { meResult ->
+                                    session = when (meResult) {
+                                        is ApiResult.Success -> meResult.value.toUiSession(
+                                            accessToken = backendSession.accessToken,
+                                            connectionMessage = "已通过后端 /api/v1/me 获取当前用户会话。",
+                                        )
+                                        is ApiResult.Failure -> backendSession.toUiSession(
+                                            "登录成功，但刷新当前用户失败：${meResult.message}",
+                                        )
+                                    }
+                                }
+                            }
+                            is ApiResult.Failure -> {
+                                loginError = result.message
+                            }
+                        }
+                    }
+                },
+                onUseDemo = { studentNumber ->
+                    val displayCode = publicCodeForStudentNumber(studentNumber.ifBlank { "DEMO-STUDENT" })
+                    loginError = null
+                    session = StudentSessionUi(
+                        publicCode = displayCode,
+                        connectionMessage = "当前为本地演示数据，未连接后端服务。",
+                    )
                 },
             )
         } else {
@@ -95,7 +135,12 @@ fun YueluTrafficApp() {
 }
 
 @Composable
-private fun LoginScreen(onLogin: (String) -> Unit) {
+private fun LoginScreen(
+    isLoading: Boolean,
+    errorMessage: String?,
+    onLogin: (String) -> Unit,
+    onUseDemo: (String) -> Unit,
+) {
     var studentNumber by rememberSaveable { mutableStateOf("") }
     var acknowledged by rememberSaveable { mutableStateOf(false) }
     val canContinue = studentNumber.trim().length >= 4 && acknowledged
@@ -146,11 +191,26 @@ private fun LoginScreen(onLogin: (String) -> Unit) {
         }
         Spacer(modifier = Modifier.height(20.dp))
         Button(
-            enabled = canContinue,
+            enabled = canContinue && !isLoading,
             onClick = { onLogin(studentNumber) },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("进入地图")
+            Text(if (isLoading) "正在连接后端" else "登录并进入地图")
+        }
+        OutlinedButton(
+            enabled = !isLoading && (studentNumber.isBlank() || acknowledged),
+            onClick = { onUseDemo(studentNumber) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("使用本地演示模式")
+        }
+        if (errorMessage != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            StatusNotice(
+                title = "后端连接失败",
+                body = errorMessage,
+                isWarning = true,
+            )
         }
         Spacer(modifier = Modifier.height(12.dp))
         Text(
@@ -280,8 +340,8 @@ private fun MapHomeScreen(
         }
         item {
             StatusNotice(
-                title = "演示模式",
-                body = "${AppCopy.demoModeNotice}${AppCopy.backendDeferred}",
+                title = if (session.isDemoMode) "演示模式" else "后端在线",
+                body = session.connectionMessage,
             )
         }
         item {
@@ -475,7 +535,11 @@ private fun ProfileScreen(
             AppHeader(
                 title = "我的",
                 subtitle = "应用内代码 ${session.publicCode}",
-                badge = if (session.isDemoAdmin) "演示管理员" else "普通用户",
+                badge = if (session.isDemoAdmin) {
+                    if (session.isDemoMode) "演示管理员" else "管理员"
+                } else {
+                    "普通用户"
+                },
             )
         }
         item {
@@ -820,6 +884,9 @@ private fun ProfileOverview(session: StudentSessionUi, activeReports: Int) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("账号概览", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("展示代码：${session.publicCode}")
+            Text("角色：${roleLabel(session.role)}")
+            Text("称号：${titleLabel(session.titleCode)}")
+            Text("信誉：${session.reputationScore} · 积分：${session.points}")
             Text("当前生效上报：$activeReports 条")
             Text("模式：${if (session.isDemoMode) "本地演示" else "后端在线"}")
             Text("学号不会公开展示，排行榜仅展示应用内代码。", style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
@@ -883,6 +950,23 @@ private fun leaderboardEntries(publicCode: String, activeReports: Int): List<Lea
     LeaderboardEntryUi(2, "同学-8A19C2", 22, "通勤雷达"),
     LeaderboardEntryUi(3, "同学-31F0B7", 18, "安全提醒员"),
 )
+
+private fun BackendAuthSession.toUiSession(connectionMessage: String): StudentSessionUi {
+    return user.toUiSession(accessToken = accessToken, connectionMessage = connectionMessage)
+}
+
+private fun BackendUserProfile.toUiSession(accessToken: String, connectionMessage: String): StudentSessionUi {
+    return StudentSessionUi(
+        publicCode = publicCode,
+        accessToken = accessToken,
+        role = role,
+        reputationScore = reputationScore,
+        points = points,
+        titleCode = titleCode,
+        connectionMessage = connectionMessage,
+        isDemoMode = false,
+    )
+}
 
 private fun markerColor(type: TrafficReportType, confidence: Int): Color {
     val strong = confidence >= 60
