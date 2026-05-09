@@ -1,35 +1,60 @@
-# Codex Project Development Workbench
+# Yuelu Traffic
 
-This repository contains a general-purpose Codex project development control system.
+Yuelu Traffic is an Android-based crowdsourced traffic safety and incident reporting app for the Central South University and Lushan South Road pilot area.
 
-It is not a finished business project yet. It is a reusable workbench for guiding Codex from requirements to implementation, validation, documentation, and handoff across many project types.
+The project is being implemented milestone by milestone from `Prompt.md`, `Plan.md`, and `Implement.md`. Current code contains the first runnable skeleton: a Spring Boot backend module and a Jetpack Compose Android module.
 
-## What This Workbench Is
+## Current Modules
 
-This workbench gives Codex a structured way to develop projects without being tied to a single technology stack.
+- `backend/` - Java 21 Spring Boot REST API.
+- `android/` - Kotlin Jetpack Compose Android app.
+- `docs/` - architecture and project notes.
+- `scripts/` - reserved for helper and validation scripts.
 
-It can be adapted for:
+## Prerequisites
 
-- Android apps
-- Web frontends
-- Full-stack web apps
-- Backend API services
-- Python tools
-- Desktop apps
-- Database experiments
-- Course assignments
-- NLP / ML baselines
-- Research code
-- Data analysis projects
-- Small complete software engineering projects
+- JDK 21. Android Studio's bundled JBR 21 is sufficient.
+- Android SDK with API 35 installed.
+- Gradle wrapper from this repository.
 
-The default strategy is:
+If Java or Android SDK are not on `PATH`, set them for the current PowerShell session before running Gradle:
 
-1. Define the real project in `Prompt.md`.
-2. Use `Plan.md` to work milestone by milestone.
-3. Use `Implement.md` as the autonomous execution protocol.
-4. Keep `Documentation.md` updated after meaningful work.
-5. Validate every milestone before moving on.
+```powershell
+$env:JAVA_HOME="D:\Android Studio\jbr"
+$env:ANDROID_HOME="D:\AndroidDev\AndroidSDK"
+$env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
+```
+
+Adjust those paths for your machine.
+
+## Run and Validate the Skeleton
+
+From the repository root:
+
+```powershell
+.\gradlew.bat :backend:test
+.\gradlew.bat :backend:bootJar
+.\gradlew.bat :android:testDebugUnitTest
+.\gradlew.bat :android:assembleDebug
+```
+
+Run the backend locally:
+
+```powershell
+.\gradlew.bat :backend:bootRun
+```
+
+Then check:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/v1/health
+```
+
+The Android debug APK is generated at:
+
+```text
+android/build/outputs/apk/debug/android-debug.apk
+```
 
 ## Control Files
 
@@ -65,7 +90,7 @@ It records current status, selected stack, milestone progress, work log entries,
 
 ### `src/`
 
-Default location for source code once a concrete project begins.
+Legacy workbench placeholder. Business code now lives in `android/` and `backend/`.
 
 ### `tests/`
 
@@ -196,4 +221,3 @@ Specify grading requirements, deliverables, allowed libraries, report format, an
 - If Codex makes an assumption, it must record that assumption.
 - If Codex is blocked, it must stop, record the reason, list attempted fixes, and suggest the next smallest action.
 - Avoid complex dependencies and infrastructure unless the project explicitly needs them.
-

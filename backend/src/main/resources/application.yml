@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: yuelu-traffic-backend
+
+server:
+  port: ${PORT:8080}

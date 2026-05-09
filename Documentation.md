@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Milestone 0 complete; ready for Milestone 1 minimal running skeleton
+Milestone 1 complete; ready for Milestone 2 core P0 feature 1
 
 Last updated:
 
@@ -50,8 +50,8 @@ This stack keeps the Android client native, keeps the backend conservative and d
 | Milestone | Status | Notes |
 |---|---|---|
 | Milestone 0 — Project Understanding and Setup | Completed | Technical stack, architecture, module boundaries, data model draft, API draft, and validation strategy recorded in `docs/Architecture.md`. |
-| Milestone 1 — Minimal Running Skeleton | Next | Initialize Android and backend skeletons only; no P0 feature implementation beyond bootstrapping. |
-| Milestone 2 — Core P0 Feature 1 | Not started | |
+| Milestone 1 — Minimal Running Skeleton | Completed | Root Gradle multi-project, Spring Boot health endpoint, Compose Android startup screen, wrapper, README run instructions, and validation commands are in place. |
+| Milestone 2 — Core P0 Feature 1 | Next | Implement lightweight student-number entry/auth, privacy notice, hashed backend identifier, and non-sensitive public user display. |
 | Milestone 3 — Core P0 Feature 2 | Not started | |
 | Milestone 4 — Core P0 Feature 3 | Not started | |
 | Milestone 5 — Integration and Error Handling | Not started | |
@@ -276,6 +276,96 @@ Next step:
 
 ---
 
+### 2026-05-09 - Milestone 1 Minimal Running Skeleton
+
+Date: 2026-05-09
+
+Milestone: Milestone 1 - Minimal Running Skeleton
+
+Files changed:
+
+- `.gitignore`
+- `settings.gradle`
+- `build.gradle`
+- `gradle.properties`
+- `gradlew`
+- `gradlew.bat`
+- `gradle/wrapper/gradle-wrapper.jar`
+- `gradle/wrapper/gradle-wrapper.properties`
+- `backend/build.gradle`
+- `backend/src/main/java/com/yuelutraffic/YueluTrafficBackendApplication.java`
+- `backend/src/main/java/com/yuelutraffic/health/HealthController.java`
+- `backend/src/main/resources/application.yml`
+- `backend/src/test/java/com/yuelutraffic/health/HealthControllerTest.java`
+- `android/build.gradle`
+- `android/proguard-rules.pro`
+- `android/src/main/AndroidManifest.xml`
+- `android/src/main/java/com/yuelutraffic/app/MainActivity.kt`
+- `android/src/main/res/values/strings.xml`
+- `android/src/main/res/values/styles.xml`
+- `android/src/test/java/com/yuelutraffic/app/AppNameTest.kt`
+- `README.md`
+- `Documentation.md`
+
+Work completed:
+
+- Added a root Gradle multi-project skeleton with `backend` and `android` modules.
+- Added a Spring Boot backend entry point and `/api/v1/health` endpoint.
+- Added a minimal Jetpack Compose Android app entry screen.
+- Generated the Gradle wrapper for repository-local validation.
+- Added basic README commands for backend and Android validation.
+- Preserved the planned Android/backend split and did not add P0 business behavior during the skeleton milestone.
+
+Commands run:
+
+- `java -version`
+- `gradle -version`
+- `where.exe java`
+- `where.exe gradle`
+- `where.exe sdkmanager`
+- `Get-ChildItem Env:JAVA_HOME,ANDROID_HOME,ANDROID_SDK_ROOT,GRADLE_HOME -ErrorAction SilentlyContinue`
+- `& 'D:\Android Studio\jbr\bin\java.exe' -version`
+- `.\gradlew.bat :backend:test`
+- `.\gradlew.bat :backend:bootJar`
+- `.\gradlew.bat :android:testDebugUnitTest`
+- `.\gradlew.bat :android:assembleDebug`
+
+Results:
+
+- Java and Gradle were not on `PATH`, but Android Studio's bundled JBR 21 was available at `D:\Android Studio\jbr`.
+- Android SDK was available at `D:\AndroidDev\AndroidSDK`.
+- Gradle wrapper generation succeeded.
+- Backend unit test passed.
+- Backend boot jar build passed.
+- Android debug unit test passed.
+- Android debug APK build passed.
+
+Failures:
+
+- Initial wrapper generation failed because `backend/build.gradle` declared `mavenCentral()` while root settings enforce centralized repositories.
+- Initial Android unit test failed because `android.useAndroidX=true` was missing.
+
+Fixes:
+
+- Removed the duplicate backend repository declaration and kept repositories centralized in `settings.gradle`.
+- Added root `gradle.properties` with AndroidX enabled.
+
+Decisions:
+
+- Use one root Gradle wrapper for both modules to keep validation simple.
+- Use root-level validation commands such as `.\gradlew.bat :backend:test` and `.\gradlew.bat :android:assembleDebug`.
+- Keep `src/` as a legacy workbench placeholder; implementation code lives under `backend/` and `android/`.
+
+Assumptions:
+
+- Developers can either put JDK 21 and Android SDK on `PATH` or set `JAVA_HOME`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` before running Gradle.
+
+Next step:
+
+- Start Milestone 2 by implementing lightweight student-number login/auth, privacy acknowledgement, backend hashing/redaction, and public user summary behavior.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -313,6 +403,10 @@ Next step:
 | 2026-05-09 | `git push -u origin main` | Passed | Pushed local `main` branch and set upstream tracking. |
 | 2026-05-09 | Milestone 0 document review | Passed | `docs/Architecture.md` records stack selection, module boundaries, data model, API draft, and validation strategy. No code validation was required. |
 | 2026-05-09 | `git commit -m "Complete milestone 0 architecture design"` | Passed | Created and amended the Milestone 0 commit. |
+| 2026-05-09 | `.\gradlew.bat :backend:test` | Passed | Milestone 1 backend health endpoint test passed using Android Studio JBR 21. |
+| 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 1 backend boot jar build passed. |
+| 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed after fix | Added `android.useAndroidX=true`, then Android debug unit tests passed. |
+| 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 1 Android debug APK build passed. |
 
 ## Known Issues
 

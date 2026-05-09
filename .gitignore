@@ -8,11 +8,20 @@ Thumbs.db
 *.log
 *.tmp
 *.bak
+.gradle/
+captures/
+out/
 
 # Environment and secrets
 .env
 .env.*
 !.env.example
+local.properties
+*.jks
+*.keystore
+
+# Local toolchains
+.tools/
 
 # Python
 __pycache__/
@@ -27,3 +36,15 @@ dist/
 build/
 coverage/
 
+# Java / Android / Gradle
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+*.ear
+android/.cxx/
+android/.externalNativeBuild/
+android/app/release/
+backend/build/
+android/build/
+android/app/build/
