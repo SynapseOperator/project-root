@@ -191,6 +191,66 @@ class YueluApiClient(
         }
     }
 
+    fun listAdminReviewQueue(accessToken: String, callback: (ApiResult<List<TrafficReportUi>>) -> Unit) {
+        execute(callback) {
+            parseReviewQueue(getJson(path = "/api/v1/admin/review-queue", accessToken = accessToken))
+        }
+    }
+
+    fun moderateReport(
+        accessToken: String,
+        reportId: String,
+        status: TrafficReportStatus,
+        reason: String,
+        callback: (ApiResult<TrafficReportUi>) -> Unit,
+    ) {
+        execute(callback) {
+            parseTrafficReport(
+                postJson(
+                    path = "/api/v1/admin/reports/$reportId/moderate",
+                    body = moderateReportRequestBody(status, reason),
+                    accessToken = accessToken,
+                ),
+            )
+        }
+    }
+
+    fun moderateAccident(
+        accessToken: String,
+        accidentId: String,
+        status: AccidentPostStatus,
+        reason: String,
+        callback: (ApiResult<AccidentPostUi>) -> Unit,
+    ) {
+        execute(callback) {
+            parseAccident(
+                postJson(
+                    path = "/api/v1/admin/accidents/$accidentId/moderate",
+                    body = moderateAccidentRequestBody(status, reason),
+                    accessToken = accessToken,
+                ),
+            )
+        }
+    }
+
+    fun restrictUser(
+        accessToken: String,
+        userId: String,
+        postingBanUntil: String,
+        reason: String,
+        callback: (ApiResult<BackendUserProfile>) -> Unit,
+    ) {
+        execute(callback) {
+            parseUserProfile(
+                postJson(
+                    path = "/api/v1/admin/users/$userId/restrictions",
+                    body = userRestrictionRequestBody(postingBanUntil, reason),
+                    accessToken = accessToken,
+                ),
+            )
+        }
+    }
+
     private fun <T> execute(callback: (ApiResult<T>) -> Unit, block: () -> T) {
         ioExecutor.execute {
             val result = try {
@@ -303,6 +363,18 @@ internal fun contactOfferRequestBody(contactValue: String, contactType: String =
     return "{\"contactType\":\"$contactType\",\"contactValue\":\"${escapeJson(contactValue.trim())}\"}"
 }
 
+internal fun moderateReportRequestBody(status: TrafficReportStatus, reason: String): String {
+    return "{\"status\":\"${status.name}\",\"reason\":\"${escapeJson(reason.trim())}\"}"
+}
+
+internal fun moderateAccidentRequestBody(status: AccidentPostStatus, reason: String): String {
+    return "{\"status\":\"${status.name}\",\"reason\":\"${escapeJson(reason.trim())}\"}"
+}
+
+internal fun userRestrictionRequestBody(postingBanUntil: String, reason: String): String {
+    return "{\"postingBanUntil\":\"${escapeJson(postingBanUntil.trim())}\",\"reason\":\"${escapeJson(reason.trim())}\"}"
+}
+
 internal fun parseAuthSession(json: String): BackendAuthSession {
     val root = JSONObject(json)
     return BackendAuthSession(
@@ -321,6 +393,13 @@ internal fun parseLeaderboardProfiles(json: String): List<BackendUserProfile> {
     val array = JSONArray(json)
     return List(array.length()) { index ->
         parseUserProfile(array.getJSONObject(index))
+    }
+}
+
+internal fun parseReviewQueue(json: String): List<TrafficReportUi> {
+    val array = JSONObject(json).optJSONArray("reportsUnderReview") ?: JSONArray()
+    return List(array.length()) { index ->
+        parseTrafficReport(array.getJSONObject(index))
     }
 }
 
@@ -377,6 +456,7 @@ private fun parseUserProfile(json: JSONObject): BackendUserProfile {
 }
 
 private fun parseTrafficReport(json: JSONObject): TrafficReportUi {
+    val submitter = json.optJSONObject("submitter")
     return TrafficReportUi(
         id = json.optString("id"),
         type = reportTypeFromApi(json.optString("type")),
@@ -388,16 +468,21 @@ private fun parseTrafficReport(json: JSONObject): TrafficReportUi {
         defaultExpiresAt = parseInstantOrNow(json.optString("defaultExpiresAt")),
         status = reportStatusFromApi(json.optString("status")),
         confidenceScore = json.optInt("confidenceScore", json.optInt("initialCredibility", 50)),
+        submitterId = submitter?.optString("id")?.ifBlank { null },
+        submitterPublicCode = submitter?.optString("publicCode")?.ifBlank { null },
     )
 }
 
 private fun parseAccident(json: JSONObject): AccidentPostUi {
+    val createdByUser = json.optJSONObject("createdByUser")
     return AccidentPostUi(
         id = json.optString("id"),
         locationLabel = json.optString("locationLabel", "麓山南路"),
         description = json.optString("description"),
         occurredAt = parseInstantOrNow(json.optString("occurredAt")),
         status = accidentStatusFromApi(json.optString("status")),
+        createdByUserId = createdByUser?.optString("id")?.ifBlank { null },
+        createdByPublicCode = createdByUser?.optString("publicCode")?.ifBlank { null },
     )
 }
 

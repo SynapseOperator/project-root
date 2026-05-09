@@ -80,6 +80,7 @@ import com.yuelutraffic.app.traffic.TrafficReportUi
 import com.yuelutraffic.app.traffic.applyFeedback
 import com.yuelutraffic.app.traffic.createTrafficReport
 import com.yuelutraffic.app.traffic.sampleTrafficReports
+import java.time.Instant
 
 @Composable
 fun YueluTrafficApp() {
@@ -318,14 +319,19 @@ private fun MainShell(
 ) {
     val reports = remember { mutableStateListOf<TrafficReportUi>().also { it.addAll(sampleTrafficReports()) } }
     val accidents = remember { mutableStateListOf<AccidentPostUi>().also { it.addAll(sampleAccidentPosts()) } }
+    val reviewQueue = remember { mutableStateListOf<TrafficReportUi>() }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Map) }
-    var postingRestricted by rememberSaveable { mutableStateOf(false) }
+    var postingRestricted by rememberSaveable(session.publicCode, session.postingBanUntil) {
+        mutableStateOf(session.postingBanUntil != null)
+    }
     var selectedReport by remember { mutableStateOf<TrafficReportUi?>(null) }
     var isReportLoading by rememberSaveable { mutableStateOf(false) }
     var isReportSubmitting by rememberSaveable { mutableStateOf(false) }
     var isAccidentLoading by rememberSaveable { mutableStateOf(false) }
     var isAccidentSubmitting by rememberSaveable { mutableStateOf(false) }
     var isLeaderboardLoading by rememberSaveable { mutableStateOf(false) }
+    var isAdminLoading by rememberSaveable { mutableStateOf(false) }
+    var isAdminActionRunning by rememberSaveable { mutableStateOf(false) }
     var reportStatusMessage by rememberSaveable {
         mutableStateOf(if (session.isDemoMode) "当前显示本地演示路况，未连接后端列表。" else "正在从后端加载麓山南路附近路况。")
     }
@@ -334,6 +340,9 @@ private fun MainShell(
     }
     var profileStatusMessage by rememberSaveable {
         mutableStateOf(if (session.isDemoMode) "当前为本地演示资料。" else "资料来自后端当前用户接口。")
+    }
+    var adminStatusMessage by rememberSaveable {
+        mutableStateOf(if (session.isDemoMode) "当前为本地管理员演示。" else "管理员操作将直接写入后端。")
     }
     val leaderboardRows = remember {
         mutableStateListOf<LeaderboardEntryUi>().also {
@@ -587,11 +596,130 @@ private fun MainShell(
         }
     }
 
+    fun refreshAdminQueue() {
+        if (!session.isDemoAdmin) {
+            adminStatusMessage = "当前账号不是管理员，无法读取后台审核队列。"
+            return
+        }
+        if (session.isDemoMode || session.accessToken == null) {
+            reviewQueue.clear()
+            reviewQueue.addAll(reports.filter { it.status == TrafficReportStatus.UNDER_REVIEW })
+            adminStatusMessage = if (reviewQueue.isEmpty()) {
+                "演示模式暂无待复核路况，可查看事故互助管理示例。"
+            } else {
+                "已加载 ${reviewQueue.size} 条本地演示待复核路况。"
+            }
+            return
+        }
+        isAdminLoading = true
+        adminStatusMessage = "正在加载后端审核队列。"
+        apiClient.listAdminReviewQueue(session.accessToken) { result ->
+            isAdminLoading = false
+            when (result) {
+                is ApiResult.Success -> {
+                    reviewQueue.clear()
+                    reviewQueue.addAll(result.value)
+                    adminStatusMessage = "已加载 ${result.value.size} 条后端待复核路况。"
+                }
+                is ApiResult.Failure -> {
+                    adminStatusMessage = "审核队列加载失败：${result.message}"
+                }
+            }
+        }
+    }
+
+    fun moderateReportFromAdmin(reportId: String, status: TrafficReportStatus, reason: String) {
+        if (session.isDemoMode || session.accessToken == null) {
+            val index = reports.indexOfFirst { it.id == reportId }
+            if (index >= 0) {
+                val updated = reports[index].copy(status = status)
+                replaceReport(updated)
+                reviewQueue.removeAll { it.id == reportId }
+                adminStatusMessage = "演示模式已将路况标记为${trafficStatusLabel(status)}。"
+            } else {
+                adminStatusMessage = "未找到要处理的演示路况。"
+            }
+            return
+        }
+        isAdminActionRunning = true
+        adminStatusMessage = "正在提交路况审核操作。"
+        apiClient.moderateReport(session.accessToken, reportId, status, reason) { result ->
+            isAdminActionRunning = false
+            when (result) {
+                is ApiResult.Success -> {
+                    replaceReport(result.value)
+                    reviewQueue.removeAll { it.id == result.value.id }
+                    adminStatusMessage = "路况已更新为${trafficStatusLabel(result.value.status)}。"
+                }
+                is ApiResult.Failure -> {
+                    adminStatusMessage = "路况审核操作失败：${result.message}"
+                }
+            }
+        }
+    }
+
+    fun moderateAccidentFromAdmin(accidentId: String, status: AccidentPostStatus, reason: String) {
+        if (session.isDemoMode || session.accessToken == null) {
+            val index = accidents.indexOfFirst { it.id == accidentId }
+            if (index >= 0) {
+                accidents[index] = accidents[index].copy(status = status)
+                adminStatusMessage = "演示模式已将事故互助标记为${accidentStatusLabel(status)}。"
+            } else {
+                adminStatusMessage = "未找到要处理的演示事故互助。"
+            }
+            return
+        }
+        isAdminActionRunning = true
+        adminStatusMessage = "正在提交事故互助管理操作。"
+        apiClient.moderateAccident(session.accessToken, accidentId, status, reason) { result ->
+            isAdminActionRunning = false
+            when (result) {
+                is ApiResult.Success -> {
+                    replaceAccident(result.value)
+                    adminStatusMessage = "事故互助已更新为${accidentStatusLabel(result.value.status)}。"
+                }
+                is ApiResult.Failure -> {
+                    adminStatusMessage = "事故互助管理失败：${result.message}"
+                }
+            }
+        }
+    }
+
+    fun restrictUserFromAdmin(userId: String?, reason: String) {
+        if (userId.isNullOrBlank()) {
+            adminStatusMessage = "该条目缺少后端用户 ID，无法限制上报。"
+            return
+        }
+        val banUntil = Instant.now().plusSeconds(24 * 60 * 60).toString()
+        if (session.isDemoMode || session.accessToken == null) {
+            postingRestricted = true
+            adminStatusMessage = "演示模式已开启 24 小时上报限制。"
+            return
+        }
+        isAdminActionRunning = true
+        adminStatusMessage = "正在提交用户上报限制。"
+        apiClient.restrictUser(session.accessToken, userId, banUntil, reason) { result ->
+            isAdminActionRunning = false
+            when (result) {
+                is ApiResult.Success -> {
+                    adminStatusMessage = "已限制 ${result.value.publicCode} 上报至 ${result.value.postingBanUntil ?: banUntil}。"
+                }
+                is ApiResult.Failure -> {
+                    adminStatusMessage = "用户限制操作失败：${result.message}"
+                }
+            }
+        }
+    }
+
     LaunchedEffect(session.accessToken, session.isDemoMode) {
+        postingRestricted = session.postingBanUntil != null
         if (!session.isDemoMode) {
             loadBackendReports()
             loadBackendAccidents()
             loadLeaderboard()
+        }
+        if (session.isDemoAdmin) {
+            refreshAdminQueue()
         }
     }
 
@@ -649,21 +777,25 @@ private fun MainShell(
                 leaderboardEntries = leaderboardRows,
                 profileStatusMessage = profileStatusMessage,
                 isLeaderboardLoading = isLeaderboardLoading,
+                reportsUnderReview = reviewQueue,
                 accidents = accidents,
                 postingRestricted = postingRestricted,
+                adminStatusMessage = adminStatusMessage,
+                isAdminLoading = isAdminLoading,
+                isAdminActionRunning = isAdminActionRunning,
                 onRefreshProfile = ::refreshProfile,
                 onRefreshLeaderboard = ::loadLeaderboard,
-                onHideReport = {
-                    val index = reports.indexOfFirst {
-                        it.status == TrafficReportStatus.ACTIVE || it.status == TrafficReportStatus.UNDER_REVIEW
-                    }
-                    if (index >= 0) reports[index] = reports[index].copy(status = TrafficReportStatus.HIDDEN)
+                onRefreshAdmin = ::refreshAdminQueue,
+                onApproveReport = { report ->
+                    moderateReportFromAdmin(report.id, TrafficReportStatus.ACTIVE, "管理员确认路况信息可保留。")
                 },
-                onHideAccident = {
-                    val index = accidents.indexOfFirst { it.status == AccidentPostStatus.OPEN }
-                    if (index >= 0) accidents[index] = accidents[index].copy(status = AccidentPostStatus.HIDDEN)
+                onHideReport = { report ->
+                    moderateReportFromAdmin(report.id, TrafficReportStatus.HIDDEN, "管理员隐藏不适合公开的路况信息。")
                 },
-                onToggleRestriction = { postingRestricted = !postingRestricted },
+                onHideAccident = { accident ->
+                    moderateAccidentFromAdmin(accident.id, AccidentPostStatus.HIDDEN, "管理员隐藏不适合公开的事故互助信息。")
+                },
+                onRestrictUser = ::restrictUserFromAdmin,
                 onLogout = onLogout,
                 contentPadding = innerPadding,
             )
@@ -873,13 +1005,19 @@ private fun ProfileScreen(
     leaderboardEntries: List<LeaderboardEntryUi>,
     profileStatusMessage: String,
     isLeaderboardLoading: Boolean,
+    reportsUnderReview: List<TrafficReportUi>,
     accidents: List<AccidentPostUi>,
     postingRestricted: Boolean,
+    adminStatusMessage: String,
+    isAdminLoading: Boolean,
+    isAdminActionRunning: Boolean,
     onRefreshProfile: () -> Unit,
     onRefreshLeaderboard: () -> Unit,
-    onHideReport: () -> Unit,
-    onHideAccident: () -> Unit,
-    onToggleRestriction: () -> Unit,
+    onRefreshAdmin: () -> Unit,
+    onApproveReport: (TrafficReportUi) -> Unit,
+    onHideReport: (TrafficReportUi) -> Unit,
+    onHideAccident: (AccidentPostUi) -> Unit,
+    onRestrictUser: (String?, String) -> Unit,
     onLogout: () -> Unit,
     contentPadding: PaddingValues,
 ) {
@@ -934,11 +1072,17 @@ private fun ProfileScreen(
             }
             ProfilePanel.Admin -> item {
                 AdminPanel(
+                    reportsUnderReview = reportsUnderReview,
                     accidents = accidents,
                     postingRestricted = postingRestricted,
+                    adminStatusMessage = adminStatusMessage,
+                    isLoading = isAdminLoading,
+                    isActionRunning = isAdminActionRunning,
+                    onRefresh = onRefreshAdmin,
+                    onApproveReport = onApproveReport,
                     onHideReport = onHideReport,
                     onHideAccident = onHideAccident,
-                    onToggleRestriction = onToggleRestriction,
+                    onRestrictUser = onRestrictUser,
                 )
             }
             ProfilePanel.Privacy -> item {
@@ -1279,26 +1423,92 @@ private fun LeaderboardPanel(
 
 @Composable
 private fun AdminPanel(
+    reportsUnderReview: List<TrafficReportUi>,
     accidents: List<AccidentPostUi>,
     postingRestricted: Boolean,
-    onHideReport: () -> Unit,
-    onHideAccident: () -> Unit,
-    onToggleRestriction: () -> Unit,
+    adminStatusMessage: String,
+    isLoading: Boolean,
+    isActionRunning: Boolean,
+    onRefresh: () -> Unit,
+    onApproveReport: (TrafficReportUi) -> Unit,
+    onHideReport: (TrafficReportUi) -> Unit,
+    onHideAccident: (AccidentPostUi) -> Unit,
+    onRestrictUser: (String?, String) -> Unit,
 ) {
     ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = YueluColors.Surface), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("管理员面板", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(AppCopy.adminDemoNotice, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
+            Text(adminStatusMessage, style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
+            OutlinedButton(enabled = !isLoading && !isActionRunning, onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
+                Text(if (isLoading) "正在刷新审核队列" else "刷新审核队列")
+            }
+            Text("待复核路况：${reportsUnderReview.size} 条")
+            if (reportsUnderReview.isEmpty()) {
+                Text("暂无待复核路况。", style = MaterialTheme.typography.bodySmall, color = YueluColors.InkMuted)
+            }
+            reportsUnderReview.take(4).forEach { report ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(YueluColors.SurfaceMuted, RoundedCornerShape(8.dp))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(report.locationLabel, fontWeight = FontWeight.SemiBold)
+                    Text("${report.type.label} · ${report.submitterPublicCode ?: "未知用户"}", color = YueluColors.InkMuted)
+                    Text(report.description, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Button(
+                        enabled = !isActionRunning,
+                        onClick = { onApproveReport(report) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("通过该路况")
+                    }
+                    OutlinedButton(
+                        enabled = !isActionRunning,
+                        onClick = { onHideReport(report) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("隐藏该路况")
+                    }
+                    OutlinedButton(
+                        enabled = !isActionRunning && report.submitterId != null,
+                        onClick = { onRestrictUser(report.submitterId, "管理员基于待复核路况限制上报 24 小时。") },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("限制提交者 24 小时")
+                    }
+                }
+            }
             Text("开放互助信息：${accidents.count { it.status == AccidentPostStatus.OPEN }} 条")
-            Text("上报限制：${if (postingRestricted) "已开启" else "未开启"}")
-            Button(onClick = onHideReport, modifier = Modifier.fillMaxWidth()) {
-                Text("隐藏一条路况")
-            }
-            OutlinedButton(onClick = onHideAccident, modifier = Modifier.fillMaxWidth()) {
-                Text("隐藏一条事故互助")
-            }
-            OutlinedButton(onClick = onToggleRestriction, modifier = Modifier.fillMaxWidth()) {
-                Text(if (postingRestricted) "解除上报限制" else "开启上报限制")
+            Text("当前账号限制状态：${if (postingRestricted) "已限制" else "未限制"}")
+            accidents.filter { it.status == AccidentPostStatus.OPEN }.take(4).forEach { accident ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(YueluColors.SurfaceMuted, RoundedCornerShape(8.dp))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(accident.locationLabel, fontWeight = FontWeight.SemiBold)
+                    Text(accident.createdByPublicCode ?: "未知发布者", color = YueluColors.InkMuted)
+                    Text(accident.description, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    OutlinedButton(
+                        enabled = !isActionRunning,
+                        onClick = { onHideAccident(accident) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("隐藏该事故互助")
+                    }
+                    OutlinedButton(
+                        enabled = !isActionRunning && accident.createdByUserId != null,
+                        onClick = { onRestrictUser(accident.createdByUserId, "管理员基于事故互助信息限制上报 24 小时。") },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("限制发布者 24 小时")
+                    }
+                }
             }
         }
     }

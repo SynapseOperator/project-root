@@ -23,6 +23,8 @@ data class AccidentPostUi(
     val status: AccidentPostStatus = AccidentPostStatus.OPEN,
     val contactExchangeStatus: ContactExchangeStatus = ContactExchangeStatus.NONE,
     val contactRequestId: String? = null,
+    val createdByUserId: String? = null,
+    val createdByPublicCode: String? = null,
     val visibleContacts: List<String> = emptyList(),
 )
 

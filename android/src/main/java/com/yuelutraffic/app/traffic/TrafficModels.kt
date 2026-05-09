@@ -40,6 +40,8 @@ data class TrafficReportUi(
     val confidenceScore: Int,
     val confirmCount: Int = 0,
     val expiredCount: Int = 0,
+    val submitterId: String? = null,
+    val submitterPublicCode: String? = null,
 )
 
 fun createTrafficReport(

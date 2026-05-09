@@ -73,6 +73,61 @@ class YueluApiClientTest {
     }
 
     @Test
+    fun adminRequestBodiesMatchBackendContract() {
+        assertEquals(
+            "{\"status\":\"HIDDEN\",\"reason\":\"重复或不实信息\"}",
+            moderateReportRequestBody(TrafficReportStatus.HIDDEN, " 重复或不实信息 "),
+        )
+        assertEquals(
+            "{\"status\":\"HIDDEN\",\"reason\":\"事故互助信息违规\"}",
+            moderateAccidentRequestBody(AccidentPostStatus.HIDDEN, "事故互助信息违规"),
+        )
+        assertEquals(
+            "{\"postingBanUntil\":\"2026-05-09T09:00:00Z\",\"reason\":\"多次恶意提交\"}",
+            userRestrictionRequestBody("2026-05-09T09:00:00Z", "多次恶意提交"),
+        )
+    }
+
+    @Test
+    fun adminReviewQueueParserReadsSubmitter() {
+        val reports = parseReviewQueue(
+            """
+            {
+              "reportsUnderReview": [
+                {
+                  "id": "22222222-2222-2222-2222-222222222222",
+                  "type": "CONGESTION",
+                  "latitude": 28.17,
+                  "longitude": 112.93,
+                  "locationLabel": "麓山南路",
+                  "description": "待审核路况",
+                  "submittedAt": "2026-05-09T08:00:00Z",
+                  "defaultExpiresAt": "2026-05-09T20:00:00Z",
+                  "status": "UNDER_REVIEW",
+                  "initialCredibility": 45,
+                  "confidenceScore": 45,
+                  "submitter": {
+                    "id": "11111111-1111-1111-1111-111111111111",
+                    "publicCode": "User-ABC123",
+                    "role": "USER",
+                    "reputationScore": 60,
+                    "points": 6,
+                    "titleCode": "ROAD_HELPER",
+                    "postingBanUntil": null
+                  }
+                }
+              ]
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(1, reports.size)
+        assertEquals(TrafficReportStatus.UNDER_REVIEW, reports.first().status)
+        assertEquals("11111111-1111-1111-1111-111111111111", reports.first().submitterId)
+        assertEquals("User-ABC123", reports.first().submitterPublicCode)
+    }
+
+    @Test
     fun reportRequestBodiesMatchBackendContract() {
         val createBody = createReportRequestBody(
             type = TrafficReportType.CONGESTION,
@@ -102,7 +157,16 @@ class YueluApiClientTest {
                 "defaultExpiresAt": "2026-05-09T20:00:00Z",
                 "status": "ACTIVE",
                 "initialCredibility": 50,
-                "confidenceScore": 58
+                "confidenceScore": 58,
+                "submitter": {
+                  "id": "11111111-1111-1111-1111-111111111111",
+                  "publicCode": "User-ABC123",
+                  "role": "USER",
+                  "reputationScore": 60,
+                  "points": 6,
+                  "titleCode": "ROAD_HELPER",
+                  "postingBanUntil": null
+                }
               }
             ]
             """.trimIndent(),
@@ -112,6 +176,7 @@ class YueluApiClientTest {
         assertEquals(TrafficReportType.CONSTRUCTION, reports.first().type)
         assertEquals(TrafficReportStatus.ACTIVE, reports.first().status)
         assertEquals(58, reports.first().confidenceScore)
+        assertEquals("User-ABC123", reports.first().submitterPublicCode)
     }
 
     @Test
@@ -141,7 +206,16 @@ class YueluApiClientTest {
                 "locationLabel": "麓山南路",
                 "occurredAt": "2026-05-09T08:00:00Z",
                 "description": "轻微事故",
-                "status": "OPEN"
+                "status": "OPEN",
+                "createdByUser": {
+                  "id": "55555555-5555-5555-5555-555555555555",
+                  "publicCode": "User-DEF456",
+                  "role": "USER",
+                  "reputationScore": 60,
+                  "points": 6,
+                  "titleCode": "ROAD_HELPER",
+                  "postingBanUntil": null
+                }
               }
             ]
             """.trimIndent(),
@@ -160,6 +234,7 @@ class YueluApiClientTest {
         )
 
         assertEquals(AccidentPostStatus.OPEN, accidents.first().status)
+        assertEquals("User-DEF456", accidents.first().createdByPublicCode)
         assertEquals(ContactExchangeStatus.MUTUALLY_CONFIRMED, exchange.status)
         assertEquals(1, exchange.visibleContacts.size)
     }
