@@ -9,13 +9,13 @@ It records what Codex did, why it did it, what is currently complete, what faile
 Status:
 
 - [ ] Not started
-- [x] In progress
+- [ ] In progress
 - [ ] Blocked
-- [ ] Completed
+- [x] Completed
 
 Current milestone:
 
-Repository initialized; awaiting GitHub remote
+Repository pushed to GitHub
 
 Last updated:
 
@@ -164,13 +164,15 @@ Next step:
 | 2026-05-09 | `git branch -M main` | Passed | Renamed default branch to `main`. |
 | 2026-05-09 | `git commit -m "Initialize Codex project workbench"` | Passed | Created initial local commit `ce9fbdf`. |
 | 2026-05-09 | GitHub connector repository listing | No repositories returned | No target GitHub repository could be inferred automatically. |
+| 2026-05-09 | `git remote add origin https://github.com/SynapseOperator/project-root.git` | Passed | Configured GitHub repository as `origin`. |
+| 2026-05-09 | `git push -u origin main` | Passed | Pushed local `main` branch and set upstream tracking. |
 
 ## Known Issues
 
 | Issue | Severity | Status | Notes |
 |---|---|---|---|
 | `Prompt.md` is not filled with a concrete project yet. | Medium | Open | Fill it before asking Codex to implement a specific project. |
-| GitHub remote is not configured. | Low | Open | A target GitHub repository URL is needed before this project can be pushed. |
+| GitHub remote is not configured. | Low | Resolved | `origin` is configured as `https://github.com/SynapseOperator/project-root.git`. |
 
 ## Final Handoff Notes
 
@@ -294,3 +296,54 @@ Assumptions:
 Next step:
 
 - Provide the target repository URL, then run `git remote add origin <repo-url>` and `git push -u origin main`.
+
+### 2026-05-09 - GitHub Remote Pushed
+
+Date: 2026-05-09
+
+Milestone: Repository setup for GitHub handoff
+
+Files changed:
+
+- `.git/config` local repository metadata
+- `Documentation.md`
+
+Work completed:
+
+- Added the GitHub repository as the `origin` remote.
+- Pushed the local `main` branch to GitHub.
+- Set local `main` to track `origin/main`.
+
+Commands run:
+
+- `git status --short`
+- `git remote -v`
+- `git branch --show-current`
+- `git remote add origin https://github.com/SynapseOperator/project-root.git`
+- `git push -u origin main`
+
+Results:
+
+- Push succeeded.
+- Remote URL: `https://github.com/SynapseOperator/project-root.git`
+- Branch tracking: `main` tracks `origin/main`.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Use the user-provided GitHub repository as the canonical remote.
+
+Assumptions:
+
+- The user-provided GitHub repository is the intended destination for this workbench.
+
+Next step:
+
+- Fill in `Prompt.md` with concrete project requirements before starting implementation milestones.
