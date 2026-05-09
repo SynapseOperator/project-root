@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-New active Prompt defined for full backend integration, persistent sessions, production map SDK integration, and release preparation
+Full integration phase Milestone 0 complete; ready for Milestone 1 configuration, persistent session, logout, and release foundation
 
 Last updated:
 
@@ -47,7 +47,20 @@ This stack remains suitable for the new phase because it keeps the Android clien
 
 ## Milestone Progress
 
-### Current Chinese UI Redesign Phase
+### Current Full Integration and Release Preparation Phase
+
+| Milestone | Status | Notes |
+|---|---|---|
+| Milestone 0 - Project Understanding and Setup | Completed | Active `Prompt.md` defines full Android backend integration, persistent session/logout, configurable backend URLs, production map SDK with mock fallback, and release-preparation scope. Previous active prompt is archived under `docs/prompts/2026-05-09-yuelu-traffic-chinese-ui-redesign.md`. |
+| Milestone 1 - Minimal Running Skeleton | Next | Add configuration/session foundation: persisted token/user/base URL, logout, backend status/debug surface, privacy/safety page, and release asset baseline. |
+| Milestone 2 - Core P0 Feature 1 | Not started | Connect accident board list/create/contact request/contact confirmation to backend. |
+| Milestone 3 - Core P0 Feature 2 | Not started | Connect leaderboard/profile to backend user and ranking data, including restriction state. |
+| Milestone 4 - Core P0 Feature 3 | Not started | Connect Android admin review, report moderation, accident moderation, and user restriction actions to backend. |
+| Milestone 5 - Integration and Error Handling | Not started | Add production map SDK provider abstraction, secure local key config, mock fallback, marker rendering, UI polish, icon/splash/privacy setup, and connection guides. |
+| Milestone 6 - Tests and Quality Check | Not started | Run full Gradle/build/text/safety/TODO quality gate and fix failures. |
+| Milestone 7 - Final Documentation and Delivery | Not started | Final README/Documentation updates, acceptance notes, manual checklist, and final validation. |
+
+### Previous Chinese UI Redesign Phase
 
 | Milestone | Status | Notes |
 |---|---|---|
@@ -74,6 +87,66 @@ This stack remains suitable for the new phase because it keeps the Android clien
 | Milestone 7 — Final Documentation and Delivery | Completed | README rewritten for the actual project, final limitations documented, final validation rerun, and handoff notes completed. |
 
 ## Work Log
+
+### 2026-05-09 - Full Integration Phase Milestone 0
+
+Date: 2026-05-09
+
+Milestone: Milestone 0 - Project Understanding and Setup
+
+Files changed:
+
+- `Documentation.md`
+
+Work completed:
+
+- Re-read `Prompt.md`, `Plan.md`, `Implement.md`, `AGENTS.md`, and `Documentation.md`.
+- Confirmed the active phase scope: full Android backend integration, persistent login/logout, configurable backend URL, production map SDK integration with mock fallback, and release-preparation work.
+- Confirmed the previous active Chinese UI redesign prompt is archived under `docs/prompts/2026-05-09-yuelu-traffic-chinese-ui-redesign.md`.
+- Added a new current-phase milestone tracker without deleting prior MVP or Chinese UI redesign history.
+- Mapped the generic `Plan.md` milestones to concrete work for this phase.
+
+Commands run:
+
+- `Get-Content -Raw -LiteralPath .\Prompt.md`
+- `Get-Content -Raw -LiteralPath .\Plan.md`
+- `Get-Content -Raw -LiteralPath .\Implement.md`
+- `Get-Content -Raw -LiteralPath .\Documentation.md`
+- `git status --short --branch`
+- `git diff --stat`
+- `rg --files android/src backend/src scripts docs`
+- `Get-ChildItem docs\prompts -Force`
+
+Results:
+
+- The active prompt is sufficient to start implementation.
+- The repository was clean at the start of this phase.
+- Existing Android code already covers Chinese UI, login/session API calls, and traffic report backend calls, but lacks persisted session/logout, accident/leaderboard/admin backend integration, map SDK provider integration, and release-preparation assets.
+
+Failures:
+
+- None.
+
+Fixes:
+
+- None.
+
+Decisions:
+
+- Treat the next milestone as the foundation for persisted session, backend URL configuration, logout, and release/privacy surfaces before adding more backend workflows.
+- Preserve the existing Compose stack and lightweight dependency approach unless map SDK integration requires an official SDK dependency.
+- Keep mock map fallback mandatory even after adding a production map provider.
+
+Assumptions:
+
+- The existing Spring Boot backend API contracts remain the target for accident, leaderboard, and admin integration.
+- A production Android map SDK key may not be present in local validation, so all builds must pass without committing a key.
+
+Next step:
+
+- Start Milestone 1 by adding persisted session and configurable backend URL support, logout, privacy/safety surface, and initial release assets.
+
+---
 
 Use the following template for every meaningful work session or milestone update.
 
@@ -1444,6 +1517,7 @@ Next step:
 | 2026-05-09 | Connect accident board, leaderboard/profile, and Android admin flows to backend in this phase. | The user requested full backend API integration after phone-side testing passed. |
 | 2026-05-09 | Use a lightweight Android `HttpURLConnection` client for the first backend connection milestone. | Avoids adding Retrofit/OkHttp before the core API workflow needs justify extra dependencies. |
 | 2026-05-09 | Keep PowerShell validation scripts ASCII-only internally when matching Chinese phrases. | Windows PowerShell may parse UTF-8 `.ps1` files without BOM incorrectly; Unicode code points keep the scripts portable. |
+| 2026-05-09 | Start a new milestone sequence for the full integration and release-preparation prompt. | The root `Prompt.md` now defines a materially larger phase than the completed Chinese UI redesign work. |
 
 ## Assumptions
 
@@ -1462,6 +1536,8 @@ Next step:
 
 | Date | Command / Check | Result | Notes |
 |---|---|---|---|
+| 2026-05-09 | `Test-Path docs\prompts\2026-05-09-yuelu-traffic-chinese-ui-redesign.md` | Passed | Confirmed the previous active prompt is archived for the new full integration phase. |
+| 2026-05-09 | `Select-String -Path Prompt.md -Pattern 'Full Android backend API integration\|Persistent session\|Map SDK\|Release Preparation'` | Passed | Confirmed the active prompt contains the new phase's core scope. |
 | 2026-05-09 | `$env:JAVA_HOME='D:\Android Studio\jbr'; .\gradlew.bat check` | Passed | Final Chinese UI redesign Milestone 7 Gradle check passed. |
 | 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_android_chinese_text.ps1` | Passed | Final Android Chinese text scan passed. |
 | 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Final safety text scan passed. |
