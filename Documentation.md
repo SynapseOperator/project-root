@@ -15,7 +15,7 @@ Status:
 
 Current milestone:
 
-Milestone 5 complete; ready for Milestone 6 tests and quality check
+Milestone 6 complete; ready for Milestone 7 final documentation and delivery
 
 Last updated:
 
@@ -55,8 +55,8 @@ This stack keeps the Android client native, keeps the backend conservative and d
 | Milestone 3 — Core P0 Feature 2 | Completed | Implemented traffic report APIs, pilot-area validation, default expiration, feedback, confidence scoring, reputation/points events, Android map-style report UI, submission, feedback, and tests. |
 | Milestone 4 — Core P0 Feature 3 | Completed | Implemented accident posts, mutual contact exchange, admin review/moderation, posting restrictions, Android accident/admin panels, and tests. |
 | Milestone 5 — Integration and Error Handling | Completed | Added full MVP integration test, malformed request handling, Docker/PostgreSQL deployment files, and safety text scan. Docker runtime could not be executed because Docker is not installed. |
-| Milestone 6 — Tests and Quality Check | Next | Run strongest validation set, add quality checks for API privacy/safety, and document remaining known issues. |
-| Milestone 7 — Final Documentation and Delivery | Not started | |
+| Milestone 6 — Tests and Quality Check | Completed | Added backend rule tests and TODO scan, ran full Gradle check including Android lint, reran builds, and passed safety/TODO scans. |
+| Milestone 7 — Final Documentation and Delivery | Next | Finalize README, limitations, acceptance status, and final handoff notes. |
 
 ## Work Log
 
@@ -668,6 +668,68 @@ Next step:
 
 ---
 
+### 2026-05-09 - Milestone 6 Tests and Quality Check
+
+Date: 2026-05-09
+
+Milestone: Milestone 6 - Tests and Quality Check
+
+Files changed:
+
+- `backend/src/test/java/com/yuelutraffic/reports/ReportTypeTest.java`
+- `backend/src/test/java/com/yuelutraffic/location/LocationServiceTest.java`
+- `scripts/check_no_todos.ps1`
+- `Documentation.md`
+
+Work completed:
+
+- Added backend rule tests for P0 report default expiration durations.
+- Added backend location boundary tests for the pilot area.
+- Added a TODO/FIXME scan for core implementation paths.
+- Ran the full Gradle `check` lifecycle, including backend tests, Android unit tests, and Android lint.
+- Re-ran backend jar and Android debug APK builds.
+- Re-ran safety text scan.
+
+Commands run:
+
+- `.\gradlew.bat check`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1`
+- `.\gradlew.bat :backend:bootJar`
+- `.\gradlew.bat :android:assembleDebug`
+
+Results:
+
+- Full Gradle check passed.
+- Android lint passed and produced `android/build/reports/lint-results-debug.html`.
+- Safety text scan passed.
+- TODO/FIXME scan passed after the script excluded itself from scanning.
+- Backend boot jar build passed.
+- Android debug APK build passed.
+
+Failures:
+
+- Initial TODO/FIXME scan failed because `scripts/check_no_todos.ps1` detected its own search pattern.
+
+Fixes:
+
+- Excluded the currently running script from its scan target set, then reran successfully.
+
+Decisions:
+
+- Keep lightweight repository scripts for safety and TODO checks rather than adding another lint framework.
+- Treat Android lint through Gradle `check` as the current strongest available UI quality gate in this environment.
+
+Assumptions:
+
+- Emulator or physical-device manual UI validation will be a final residual risk because no running Android device was available in this session.
+
+Next step:
+
+- Start Milestone 7 by finalizing README, acceptance notes, known limitations, and final handoff status.
+
+---
+
 ## Decisions
 
 | Date | Decision | Reason |
@@ -727,6 +789,11 @@ Next step:
 | 2026-05-09 | `.\gradlew.bat :android:testDebugUnitTest` | Passed | Milestone 5 Android unit tests passed. |
 | 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 5 backend jar build passed. |
 | 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 5 Android debug APK build passed. |
+| 2026-05-09 | `.\gradlew.bat check` | Passed | Milestone 6 full Gradle check passed, including backend tests, Android unit tests, and Android lint. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_safety_text.ps1` | Passed | Milestone 6 safety text scan passed. |
+| 2026-05-09 | `powershell -ExecutionPolicy Bypass -File .\scripts\check_no_todos.ps1` | Failed then passed | Initial self-match fixed by excluding the script itself; rerun passed. |
+| 2026-05-09 | `.\gradlew.bat :backend:bootJar` | Passed | Milestone 6 backend jar build passed. |
+| 2026-05-09 | `.\gradlew.bat :android:assembleDebug` | Passed | Milestone 6 Android debug APK build passed. |
 
 ## Known Issues
 
